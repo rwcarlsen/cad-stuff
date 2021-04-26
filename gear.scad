@@ -99,15 +99,63 @@ module ring(tooth_count, inner_gear_params) {
     }
 }
 
+module hole(d) {
+    difference() {children(0); circle(d=d);}
+}
 
-sun_params = gearParams(12, 1, 18, .03);
-ring_teeth = 60;
+// user custom parameters
+tooth_width = 3/16;
+clearance = .003;
+pressure_angle = 18;
+sun_teeth = 12;
+ring_teeth = 36;
+sun_hole = .375;
+planet_hole = .375;
 
-planet_params = gearParams((ring_teeth - gearToothCount(sun_params)) / 2, 1, 18, .03);
+// calc various relevant parameters
+planet_teeth = (ring_teeth - sun_teeth) / 2;
+sun_params = gearParams(sun_teeth, tooth_width, pressure_angle, clearance);
+planet_params = gearParams(planet_teeth, tooth_width, pressure_angle, clearance);
+planet_radius = gearRadius(tooth_width, planet_teeth);
+sun_radius = gearRadius(tooth_width, sun_teeth);
+ring_radius = gearRadius(tooth_width, ring_teeth);
+planet_axle_radius = ring_radius - planet_radius;
+echo(ring_radius);
 
-planet_axle_radius = gearRadius(1, ring_teeth) - gearRadius(1, gearToothCount(planet_params));
-translate([0,planet_axle_radius,0]) gear(planet_params);
-rotate([0,0,120]) translate([0,planet_axle_radius,0]) gear(planet_params);
-rotate([0,0,-120]) translate([0,planet_axle_radius,0]) gear(planet_params);
-ring(ring_teeth,planet_params);
-rotate(0.5 / gearToothCount(sun_params)*360) gear(sun_params);
+// create the gears/assembly
+linear_extrude(height=.25) {
+    translate([0,planet_axle_radius,0]) hole(d=planet_hole) gear(planet_params);
+    rotate([0,0,120]) translate([0,planet_axle_radius,0]) hole(d=planet_hole) gear(planet_params);
+    rotate([0,0,-120]) translate([0,planet_axle_radius,0]) hole(d=planet_hole) gear(planet_params);
+    ring(ring_teeth,planet_params);
+    rotate(0.5 / gearToothCount(sun_params)*360) hole(d=sun_hole) gear(sun_params);
+}
+
+// planet coupler
+coupler_width = 3*planet_hole;
+translate([0,0,2]) {
+    rotate([0,180,0]) {
+        linear_extrude(height=.25) {
+            union() {
+                for (angle = [0,120,-120]) {
+                    rotate([0,0,angle]) {
+                        difference() {
+                            union() {
+                                circle(d=coupler_width);
+                                translate([0,planet_axle_radius,0]) circle(d=coupler_width);
+                                translate([0,planet_axle_radius/2,0]) square([coupler_width,planet_axle_radius],true);
+                            }
+                            circle(d=planet_hole);
+                        }
+                    }
+                }
+            }
+        }
+
+        for (angle = [0,120,-120]) {
+            rotate([0,0,angle]) {
+                translate([0,planet_axle_radius,0]) cylinder(h=0.5, d=planet_hole);
+            }
+        }
+    }
+}

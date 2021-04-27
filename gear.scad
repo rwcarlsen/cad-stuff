@@ -41,7 +41,7 @@ module gear(params) {
     pt4 = [x4, y4];
     pts = [pt1, pt2, pt3, pt4];
 
-    ndivs = 30;
+    ndivs = 20;
     difference() {
         circle(d=diameter + 2*addendum_small);
         // subtract out the hole each meshing tooth takes out of our gear as it passes by
@@ -107,10 +107,16 @@ module hole(d) {
 tooth_width = 3/16;
 clearance = .003;
 pressure_angle = 18;
-sun_teeth = 9;
-ring_teeth = 33;
+n_planets = 3;
+sun_teeth = 9; // must be multiple of n_planets;
+ring_teeth = 33; // must be multiple of n_planets and "ring_teeth-sun_teeth" must be even.
 sun_hole = .375;
 planet_hole = .375;
+thickness = 0.25;
+
+assert((ring_teeth - sun_teeth) % 2 == 0, "difference between sun and ring tooth count must be even");
+assert(sun_teeth % n_planets == 0, "sun_teeth count must be a multiple of n_planets");
+assert(ring_teeth % n_planets == 0, "ring_teeth count must be a multiple of n_planets");
 
 // calc various relevant parameters
 planet_teeth = (ring_teeth - sun_teeth) / 2;
@@ -123,21 +129,24 @@ planet_axle_radius = ring_radius - planet_radius;
 echo(ring_radius);
 
 // create the gears/assembly
-linear_extrude(height=.25) {
-    translate([0,planet_axle_radius,0]) hole(d=planet_hole) gear(planet_params);
-    rotate([0,0,120]) translate([0,planet_axle_radius,0]) hole(d=planet_hole) gear(planet_params);
-    rotate([0,0,-120]) translate([0,planet_axle_radius,0]) hole(d=planet_hole) gear(planet_params);
+linear_extrude(height=thickness) {
+    for (i = [0:n_planets - 1]) {
+        dtheta = 360 / n_planets * i;
+        rotate([0,0,dtheta]) translate([0,planet_axle_radius,0]) hole(d=planet_hole) gear(planet_params);
+    }
     ring(ring_teeth,planet_params);
-    rotate(0.5 / gearToothCount(sun_params)*360) hole(d=sun_hole) gear(sun_params);
+    sun_rot = (1 - gearToothCount(planet_params) % 2) * 360 / 2 / gearToothCount(sun_params);
+    rotate(sun_rot) hole(d=sun_hole) gear(sun_params);
 }
 
 // planet coupler
 coupler_width = 2.5*planet_hole;
 translate([0,0,2]) {
     rotate([0,180,0]) {
-        linear_extrude(height=.25) {
+        linear_extrude(height=thickness) {
             union() {
-                for (angle = [0,120,-120]) {
+                for (i = [0:n_planets - 1]) {
+                    angle = 360 / n_planets * i;
                     rotate([0,0,angle]) {
                         difference() {
                             union() {
@@ -152,10 +161,9 @@ translate([0,0,2]) {
             }
         }
 
-        for (angle = [0,120,-120]) {
-            rotate([0,0,angle]) {
-                translate([0,planet_axle_radius,0]) cylinder(h=0.5, d=planet_hole);
-            }
+        for (i = [0:n_planets - 1]) {
+            angle = 360 / n_planets * i;
+            rotate([0,0,angle]) translate([0,planet_axle_radius,0]) cylinder(h=0.5, d=planet_hole);
         }
     }
 }

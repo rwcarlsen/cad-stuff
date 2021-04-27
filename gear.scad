@@ -41,7 +41,7 @@ module gear(params) {
     pt4 = [x4, y4];
     pts = [pt1, pt2, pt3, pt4];
 
-    ndivs = 20;
+    ndivs = 30;
     difference() {
         circle(d=diameter + 2*addendum_small);
         // subtract out the hole each meshing tooth takes out of our gear as it passes by
@@ -49,7 +49,7 @@ module gear(params) {
             rotate(a=[0, 0, i*360/tooth_count]) {
                 // simulate each tooth by translating it along the x axis
                 for (j = [-(ndivs-1):ndivs-1]) {
-                    dx = j / (2*ndivs) * 6 * tooth_width;
+                    dx = j / (2*ndivs) * 4 * tooth_width;
                     dtheta = dx / circum * 360;
                     // and rotating it as much as our gear would have to rotate
                     rotate(a=[0, 0, dtheta]) {
@@ -107,8 +107,8 @@ module hole(d) {
 tooth_width = 3/16;
 clearance = .003;
 pressure_angle = 18;
-sun_teeth = 12;
-ring_teeth = 36;
+sun_teeth = 9;
+ring_teeth = 33;
 sun_hole = .375;
 planet_hole = .375;
 
@@ -132,7 +132,7 @@ linear_extrude(height=.25) {
 }
 
 // planet coupler
-coupler_width = 3*planet_hole;
+coupler_width = 2.5*planet_hole;
 translate([0,0,2]) {
     rotate([0,180,0]) {
         linear_extrude(height=.25) {

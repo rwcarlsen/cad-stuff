@@ -1,4 +1,4 @@
-$fn = 60;
+$fn = 40;
 resolution = 5; // 10 is high/good
 
 // backlash is extra absolute distance to leave between meshing teeth
@@ -119,11 +119,19 @@ module ring(tooth_count, inner_gear_params, hole_dia, thickness) {
 }
 
 module hole(d) {
-    difference() {children(0); circle(d=d);}
+    difference(convexity=10) {children(0); circle(d=d);}
 }
 
 module gear3D(params, thickness, shaft_d=0) {
-    linear_extrude(height=thickness) hole(d=shaft_d) gear(params);
+    inset = thickness / 4;
+    addendum = gearToothWidth(params)*2/PI; // how far above+below pitch line teeth go
+    inset_r2 = gearRadiusP(params) - 1.6*addendum;
+    inset_r1 = shaft_d/2 + addendum*0.6;
+    difference(convexity=10) {
+        linear_extrude(height=thickness, convexity=10) hole(d=shaft_d) gear(params);
+        translate([0,0,-.05*thickness])
+            linear_extrude(height=0.1*thickness, convexity=10) hole(d=2*inset_r1) circle(r=inset_r2);
+    }
 }
 
 module topBracket(tooth_count, inner_gear_params, hole_dia, thickness) {
@@ -138,15 +146,15 @@ module topBracket(tooth_count, inner_gear_params, hole_dia, thickness) {
     addendum = tooth_width*2/PI;
     ring_width = 2 * tooth_width;
     pin_height = thickness/2;
-    difference() {
-        linear_extrude(height=2*thickness) {
-            intersection() {
+    difference(convexity=10) {
+        linear_extrude(height=2*thickness, convexity=10) {
+            intersection(convexity=10) {
                 circle(r=outer_radius + ring_width);
                 hole(d=hole_dia) square([2*outer_diameter, 2*hole_dia], center=true);
             }
         }
-
-        translate([0,0,-thickness]) cylinder(h=2*thickness, r=outer_radius + addendum);
+        // the 0.1 are just to avoid quick-prievew/render artifacts
+        translate([0,0,-1.1*thickness]) cylinder(h=2.1*thickness, r=outer_radius + addendum);
         // alignment pin holes
         translate([-outer_radius-tooth_width,0,-2*thickness+pin_height]) cylinder(h=2*thickness, d=tooth_width);
         translate([+outer_radius+tooth_width,0,-2*thickness+pin_height]) cylinder(h=2*thickness, d=tooth_width);
@@ -155,13 +163,13 @@ module topBracket(tooth_count, inner_gear_params, hole_dia, thickness) {
 }
 
 module planet_carrier(n_arms, arm_width, arm_length, hole_dia, thickness) {
-    length = arm_length - (arm_width - hole_dia) / 2; // reduced length to match arm outer curve to carrier pins
+    length = arm_length - (arm_width - hole_dia) *0.25; // reduced length to match arm outer curve to carrier pins
     union() {
-        linear_extrude(height=thickness-1/32) {
+        linear_extrude(height=thickness-1/32, convexity=10) {
             for (i = [0:n_arms - 1]) {
                 angle = 360 / n_planets * i;
                 rotate([0,0,angle]) {
-                    difference() {
+                    difference(convexity=10) {
                         union() {
                             circle(d=arm_width);
                             translate([0,length,0]) circle(d=arm_width);
@@ -172,11 +180,13 @@ module planet_carrier(n_arms, arm_width, arm_length, hole_dia, thickness) {
                 }
             }
         }
-
+        
+        pad_radius = length+arm_width/2-arm_length;
+        linear_extrude(height=thickness, convexity=10) hole(d=hole_dia) circle(r=pad_radius); // center pad
         for (i = [0:n_arms - 1]) {
             angle = 360 / n_arms * i;
             rotate([0,0,angle]) translate([0,arm_length,0]) cylinder(h=2*thickness, d=hole_dia); // pins
-            rotate([0,0,angle]) translate([0,length,0]) cylinder(h=thickness, d=arm_width); // pads
+            rotate([0,0,angle]) translate([0,arm_length,0]) cylinder(h=thickness, r=pad_radius); // pads
         }
     }
 }
@@ -195,9 +205,9 @@ module assembly_layout(n_planets, planet_params, sun_params, ring_teeth, thickne
     planet_radius = gearRadiusP(planet_params);
     ring_radius = gearRadius(gearToothWidth(planet_params), ring_teeth);
     t_mult = $t * (1+ring_radius / sun_radius);
-    sun_time_angle = t_mult * 360 / n_planets;
-    planet_time_angle = -$t * 360 / n_planets * ring_radius / planet_radius;
-    carrier_time_angle = t_mult * 360 / n_planets * (1/(1+ring_radius / sun_radius));
+    sun_time_angle = t_mult * 270;
+    planet_time_angle = -$t * 270 * ring_radius / planet_radius;
+    carrier_time_angle = t_mult * 270 * (1/(1+ring_radius / sun_radius));
     
     for (i = [0:n_planets - 1]) {
         dtheta = 360 / n_planets * i + carrier_time_angle;
@@ -238,7 +248,7 @@ module milling_layout(n_planets, planet_params, sun_params, ring_teeth, thicknes
 };
 
 // user custom parameters
-$vpr = [$t*360, $t*360, 0];
+$vpr = [20, $t*360, 0];
 tooth_width = 3/16;
 backlash = .003;
 pressure_angle = 18;

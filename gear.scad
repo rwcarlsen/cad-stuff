@@ -1,19 +1,19 @@
 $fn = 60;
 
-// tooth_clearance is extra absolute distance to leave between meshing teeth
-function gearParams(tooth_count, tooth_width, pressure_angle, tooth_clearance) = [tooth_count, tooth_width, pressure_angle, tooth_clearance];
+// backlash is extra absolute distance to leave between meshing teeth
+function gearParams(tooth_count, tooth_width, pressure_angle, backlash) = [tooth_count, tooth_width, pressure_angle, backlash];
 function gearToothCount(params) = params[0];
 function gearToothWidth(params) = params[1];
 function gearPressureAngle(params) = params[2];
-function gearToothClearance(params) = params[3];
+function gearBacklash(params) = params[3];
 function gearRadius(tooth_width, tooth_count) = tooth_width * 2 * tooth_count / PI / 2;
-function modToothClearance(params, clearance) = [params[0], params[1], params[2], clearance];
+function modBacklash(params, backlash) = [params[0], params[1], params[2], backlash];
 
 module gear(params) {
     tooth_width = gearToothWidth(params);
     tooth_count = gearToothCount(params);
     pressure_angle = gearPressureAngle(params);
-    tooth_clearance = gearToothClearance(params);
+    backlash = gearBacklash(params);
 
     addendum_clearance = 0.05; // fraction of addendum
     addendum = tooth_width*2/PI; // how far above+below pitch line teeth go
@@ -25,7 +25,7 @@ module gear(params) {
     radius = diameter / 2;
 
     // calculate tooth points
-    tooth_width_plus = tooth_width + tooth_clearance;
+    tooth_width_plus = tooth_width + backlash;
     x1 = -tooth_width_plus / 2 - addendum_big*sin(pressure_angle);
     y1 = radius + addendum_big*cos(pressure_angle);
     x2 = -1 * x1;
@@ -41,7 +41,7 @@ module gear(params) {
     pt4 = [x4, y4];
     pts = [pt1, pt2, pt3, pt4];
 
-    ndivs = 20;
+    ndivs = 15;
     difference() {
         circle(d=diameter + 2*addendum_small);
         // subtract out the hole each meshing tooth takes out of our gear as it passes by
@@ -67,8 +67,8 @@ module ring(tooth_count, inner_gear_params) {
     tooth_width = gearToothWidth(inner_gear_params);
     inner_tooth_count = gearToothCount(inner_gear_params);
     pressure_angle = gearPressureAngle(inner_gear_params);
-    tooth_clearance = gearToothClearance(inner_gear_params);
-    modded_params = modToothClearance(inner_gear_params, -tooth_clearance);
+    backlash = gearToothClearance(inner_gear_params);
+    modded_params = modBacklash(inner_gear_params, -backlash);
 
     inner_circum = tooth_width * 2 * inner_tooth_count;
     inner_diameter = inner_circum / PI;
@@ -83,7 +83,7 @@ module ring(tooth_count, inner_gear_params) {
     
     ring_width = 2 * tooth_width;
     inner_axle_radius = outer_radius - inner_radius;
-    ndivs = 10;
+    ndivs = 7;
     difference() {
         difference() {circle(r=outer_radius + ring_width);circle(r=outer_radius - addendum_small);}
         for (i = [0:tooth_count-1]) {
@@ -103,9 +103,61 @@ module hole(d) {
     difference() {children(0); circle(d=d);}
 }
 
+// create the gears/assembly
+module planetary_gear_stage(n_planets, planet_params, sun_params, ring_teeth, sun_hole, planet_hole, thickness) {
+    sun_teeth = gearToothCount(sun_params);
+    assert((ring_teeth - sun_teeth) % 2 == 0, "difference between sun and ring tooth count must be even");
+    assert(sun_teeth % n_planets == 0, "sun_teeth count must be a multiple of n_planets");
+    assert(ring_teeth % n_planets == 0, "ring_teeth count must be a multiple of n_planets");
+    linear_extrude(height=thickness) {
+        for (i = [0:n_planets - 1]) hole(d=planet_hole) gear(planet_params);
+        hole(d=sun_hole) gear(sun_params);
+        ring(ring_teeth,planet_params);
+    }
+}
+
+module planet_carrier(n_arms, arm_width, arm_length, hole_dia, thickness) {
+    union() {
+        linear_extrude(height=thickness) {
+            for (i = [0:n_arms - 1]) {
+                angle = 360 / n_planets * i;
+                rotate([0,0,angle]) {
+                    difference() {
+                        union() {
+                            circle(d=arm_width);
+                            translate([0,arm_length,0]) circle(d=arm_width);
+                            translate([0,arm_length/2,0]) square([arm_width,arm_length],true);
+                        }
+                        circle(d=hole_dia);
+                    }
+                }
+            }
+        }
+
+        for (i = [0:n_arms - 1]) {
+            angle = 360 / n_arms * i;
+            rotate([0,0,angle]) translate([0,arm_length,0]) cylinder(h=2*thickness, d=hole_dia);
+        }
+    }
+}
+
+module assemble(planet_params, sun_params, carrier_lift=0) {
+    n_planets = $children - 3;
+    for (i = [0:n_planets - 1]) {
+        dtheta = 360 / n_planets * i;
+        rotate([0,0,dtheta]) translate([0,planet_axle_radius,0]) children(i);
+    }
+    sun_index = n_planets + 0;
+    sun_rot = (1 - gearToothCount(planet_params) % 2) * 360 / 2 / gearToothCount(sun_params);
+    rotate(sun_rot) children(sun_index);
+    carrier_index = n_planets + 2;
+    translate([0,0,carrier_lift]) rotate([0,180,0]) children(carrier_index);
+};
+
+
 // user custom parameters
 tooth_width = 3/16;
-clearance = .003;
+backlash = .003;
 pressure_angle = 18;
 n_planets = 3;
 sun_teeth = 9; // must be multiple of n_planets;
@@ -113,57 +165,20 @@ ring_teeth = 33; // must be multiple of n_planets and "ring_teeth-sun_teeth" mus
 sun_hole = .375;
 planet_hole = .375;
 thickness = 0.25;
+carrier_arm_width = 2.5*planet_hole;
 
-assert((ring_teeth - sun_teeth) % 2 == 0, "difference between sun and ring tooth count must be even");
-assert(sun_teeth % n_planets == 0, "sun_teeth count must be a multiple of n_planets");
-assert(ring_teeth % n_planets == 0, "ring_teeth count must be a multiple of n_planets");
 
 // calc various relevant parameters
 planet_teeth = (ring_teeth - sun_teeth) / 2;
-sun_params = gearParams(sun_teeth, tooth_width, pressure_angle, clearance);
-planet_params = gearParams(planet_teeth, tooth_width, pressure_angle, clearance);
+sun_params = gearParams(sun_teeth, tooth_width, pressure_angle, backlash);
+planet_params = gearParams(planet_teeth, tooth_width, pressure_angle, backlash);
 planet_radius = gearRadius(tooth_width, planet_teeth);
 sun_radius = gearRadius(tooth_width, sun_teeth);
 ring_radius = gearRadius(tooth_width, ring_teeth);
-planet_axle_radius = ring_radius - planet_radius;
-echo(ring_radius);
+planet_arm_radius = ring_radius - planet_radius;
+echo("ring_diameter=", 2*ring_radius);
 
-// create the gears/assembly
-linear_extrude(height=thickness) {
-    for (i = [0:n_planets - 1]) {
-        dtheta = 360 / n_planets * i;
-        rotate([0,0,dtheta]) translate([0,planet_axle_radius,0]) hole(d=planet_hole) gear(planet_params);
-    }
-    ring(ring_teeth,planet_params);
-    sun_rot = (1 - gearToothCount(planet_params) % 2) * 360 / 2 / gearToothCount(sun_params);
-    rotate(sun_rot) hole(d=sun_hole) gear(sun_params);
-}
-
-// planet coupler
-coupler_width = 2.5*planet_hole;
-translate([0,0,2]) {
-    rotate([0,180,0]) {
-        linear_extrude(height=thickness) {
-            union() {
-                for (i = [0:n_planets - 1]) {
-                    angle = 360 / n_planets * i;
-                    rotate([0,0,angle]) {
-                        difference() {
-                            union() {
-                                circle(d=coupler_width);
-                                translate([0,planet_axle_radius,0]) circle(d=coupler_width);
-                                translate([0,planet_axle_radius/2,0]) square([coupler_width,planet_axle_radius],true);
-                            }
-                            circle(d=planet_hole);
-                        }
-                    }
-                }
-            }
-        }
-
-        for (i = [0:n_planets - 1]) {
-            angle = 360 / n_planets * i;
-            rotate([0,0,angle]) translate([0,planet_axle_radius,0]) cylinder(h=0.5, d=planet_hole);
-        }
-    }
+assemble(planet_params, sun_params, carrier_lift=2) {
+    planetary_gear_stage(n_planets, planet_params, sun_params, ring_teeth, sun_hole, planet_hole, thickness);
+    planet_carrier(n_planets, carrier_arm_width, planet_arm_radius, hole_dia, thickness);
 }

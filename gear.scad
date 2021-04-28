@@ -1,4 +1,5 @@
 $fn = 60;
+resolution = 10; // 10 is high/good
 
 // backlash is extra absolute distance to leave between meshing teeth
 function gearParams(tooth_count, tooth_width, pressure_angle, backlash) = [tooth_count, tooth_width, pressure_angle, backlash];
@@ -42,7 +43,7 @@ module gear(params) {
     pt4 = [x4, y4];
     pts = [pt1, pt2, pt3, pt4];
 
-    ndivs = 20;
+    ndivs = 2*resolution;
     difference() {
         circle(d=diameter + 2*addendum_small);
         // subtract out the hole each meshing tooth takes out of our gear as it passes by
@@ -84,7 +85,7 @@ module ring(tooth_count, inner_gear_params, thickness) {
     
     ring_width = 2 * tooth_width;
     inner_axle_radius = outer_radius - inner_radius;
-    ndivs = 10;
+    ndivs = resolution;
     linear_extrude(height=thickness) {
         difference() {
             difference() {circle(r=outer_radius + ring_width);circle(r=outer_radius - addendum_small);}
@@ -135,26 +136,55 @@ module planet_carrier(n_arms, arm_width, arm_length, hole_dia, thickness) {
     }
 }
 
-module assemble(planet_params, sun_params, ring_teeth, thickness, carrier_lift=0) {
+module assembly_layout(n_planets, planet_params, sun_params, ring_teeth, thickness, carrier_lift=0) {
     planet_arm_radius = gearRadius(gearToothWidth(planet_params), ring_teeth) - gearRadiusP(planet_params);;
-    assert($children >= 3, "not enough child pieces passed in to assemble module");
-    n_planets = $children - 3;
+    assert($children == 4, "wrong number of child pieces passed in to assemble module");
+    planet_index = 0;
+    sun_index = 1;
+    ring_index = 2;
+    carrier_index = 3;
+    
+    sun_radius = gearRadiusP(sun_params);
+    sun_circ = 2*PI*sun_radius;
+    planet_radius = gearRadiusP(planet_params);
+    ring_radius = gearRadius(gearToothWidth(planet_params), ring_teeth);
+    t_mult = $t * (1+ring_radius / sun_radius);
+    sun_time_angle = t_mult * 360 / n_planets;
+    planet_time_angle = -$t * 360 / n_planets * ring_radius / planet_radius;
+    carrier_time_angle = t_mult * 360 / n_planets * (1/(1+ring_radius / sun_radius));
+    
     for (i = [0:n_planets - 1]) {
-        dtheta = 360 / n_planets * i;
-        rotate([0,0,dtheta]) translate([0,planet_arm_radius,0]) children(i);
+        dtheta = 360 / n_planets * i + carrier_time_angle;
+        rotate(dtheta) translate([0,planet_arm_radius,0]) rotate(planet_time_angle) color("plum") children(planet_index);
     }
-    sun_index = n_planets + 0;
     sun_rot = (1 - gearToothCount(planet_params) % 2) * 360 / 2 / gearToothCount(sun_params);
-    rotate(sun_rot) children(sun_index);
-    ring_index = n_planets + 1;
-    children(ring_index);
-    carrier_index = n_planets + 2;
-    translate([0,0,carrier_lift + 2*thickness]) rotate([0,180,0]) children(carrier_index);
+    rotate(sun_rot + sun_time_angle) color("gold") children(sun_index);
+    color("red") children(ring_index);
+    rotate(carrier_time_angle) translate([0,0,carrier_lift + 2*thickness]) rotate([0,180,0]) color("green") children(carrier_index);
 };
 
-module mill_layout(planet_params, sun_params, ring_teeth, thickness, carrier_lift=0) {
-    assert($children >= 3, "not enough child pieces passed in to assemble module");
-    n_planets = $children - 3;
+module mill_layout(n_planets, planet_params, sun_params, ring_teeth, thickness) {
+    assert($children == 4, "wrong number of child pieces passed in to assemble module");
+    planet_index = 0;
+    sun_index = 1;
+    ring_index = 2;
+    carrier_index = 3;
+
+    addendum = gearToothWidth(sun_params)*2/PI; // how far above+below pitch line teeth go
+    ring_radius = gearRadius(gearToothWidth(planet_params), ring_teeth);
+    sun_radius = gearRadiusP(sun_params);
+    planet_arm_radius = ring_radius - gearRadiusP(planet_params);
+    gears_dx = 2.5*ring_radius;
+    
+    translate([gears_dx, 0, 0]) {
+        for (i = [0:n_planets - 1]) {
+            dtheta = 360 / n_planets * i;
+            rotate([0,0,dtheta]) translate([0,planet_arm_radius + 3*addendum,0]) color("purple") children(planet_index);
+        }
+    }
+    color("green") children(carrier_index);
+    translate([gears_dx, 0, 0]) color("gold") children(sun_index);
+    color("red") children(ring_index);
 };
 
 // user custom parameters
@@ -182,11 +212,15 @@ ring_radius = gearRadius(tooth_width, ring_teeth);
 planet_arm_radius = ring_radius - planet_radius;
 echo("ring_diameter=", 2*ring_radius);
 
-assemble(planet_params, sun_params, ring_teeth, thickness, carrier_lift=0) {
-    gear3D(planet_params, thickness, shaft_d=planet_hole);
-    gear3D(planet_params, thickness, shaft_d=planet_hole);
+assembly_layout(n_planets, planet_params, sun_params, ring_teeth, thickness, carrier_lift=0) {
     gear3D(planet_params, thickness, shaft_d=planet_hole);
     gear3D(sun_params, thickness, shaft_d=sun_hole);
     ring(ring_teeth,planet_params, thickness);
     planet_carrier(n_planets, carrier_arm_width, planet_arm_radius, planet_hole, thickness);
 }
+//mill_layout(n_planets, planet_params, sun_params, ring_teeth, thickness) {
+//    gear3D(planet_params, thickness, shaft_d=planet_hole);
+//    gear3D(sun_params, thickness, shaft_d=sun_hole);
+//    ring(ring_teeth,planet_params, thickness);
+//    planet_carrier(n_planets, carrier_arm_width, planet_arm_radius, planet_hole, thickness);
+//}

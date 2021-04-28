@@ -136,7 +136,6 @@ module planet_carrier(n_arms, arm_width, arm_length, hole_dia, thickness) {
 }
 
 module assemble(planet_params, sun_params, ring_teeth, thickness, carrier_lift=0) {
-    echo("nchildren", $children);
     planet_arm_radius = gearRadius(gearToothWidth(planet_params), ring_teeth) - gearRadiusP(planet_params);;
     assert($children >= 3, "not enough child pieces passed in to assemble module");
     n_planets = $children - 3;
@@ -153,6 +152,10 @@ module assemble(planet_params, sun_params, ring_teeth, thickness, carrier_lift=0
     translate([0,0,carrier_lift + 2*thickness]) rotate([0,180,0]) children(carrier_index);
 };
 
+module mill_layout(planet_params, sun_params, ring_teeth, thickness, carrier_lift=0) {
+    assert($children >= 3, "not enough child pieces passed in to assemble module");
+    n_planets = $children - 3;
+};
 
 // user custom parameters
 tooth_width = 3/16;

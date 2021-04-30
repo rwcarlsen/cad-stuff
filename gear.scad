@@ -1,4 +1,4 @@
-$fn = 40;
+$fn = 60;
 resolution = 5; // 10 is high/good
 
 // backlash is extra absolute distance to leave between meshing teeth
@@ -232,6 +232,7 @@ module milling_layout(n_planets, planet_params, sun_params, ring_teeth, thicknes
     addendum = gearToothWidth(sun_params)*2/PI; // how far above+below pitch line teeth go
     ring_radius = gearRadius(gearToothWidth(planet_params), ring_teeth);
     sun_radius = gearRadiusP(sun_params);
+    planet_radius = gearRadiusP(planet_params);
     planet_arm_radius = ring_radius - gearRadiusP(planet_params);
     gears_dx = 2.75*ring_radius;
 
@@ -242,37 +243,47 @@ module milling_layout(n_planets, planet_params, sun_params, ring_teeth, thicknes
     translate([tabspine_start, -tabwidth/2, 0]) cube([tabspine_length,tabwidth,thickness/2]);
     
     for (i = [0:n_planets]) {
+        gear_params = i == 0 ? sun_params : planet_params;
         // calculate rotation angles so "inside" facing teeth point directly towards
         // eath other to allow for supports while machining
-        sun_rot = ((gearToothCount(sun_params) + i % 2 + 1) % 2) * 360 / 2 / gearToothCount(sun_params);
-        planet_rot = ((gearToothCount(planet_params) + i % 2 + 1) % 2) * 360 / 2 / gearToothCount(planet_params);
-
+        rot = ((gearToothCount(gear_params) + i % 2 + 1) % 2) * 360 / 2 / gearToothCount(gear_params);
         dx = ring_radius + 2*planet_radius + floor(i/2) * (2 * planet_radius + 4 * addendum);
         dy = (2*(i % 2) - 1) * (planet_radius + 2 * addendum);
-        if (i == 0) color("gold") translate([dx, dy, thickness]) rotate([180,0,sun_rot]) children(sun_index);
-        if (i > 0) color("plum") translate([dx, dy, thickness]) rotate([180,0,planet_rot]) children(planet_index);
+        child_index = i == 0 ? sun_index : planet_index;
+        gear_color = i == 0 ? "gold" : "plum";
+        color(gear_color) translate([dx, dy, thickness]) rotate([180,0,rot]) children(child_index);
             
         // build/add support tabs
-        tablength = i == 0 ? abs(dy) - sun_radius+tabwidth : abs(dy) - planet_radius+tabwidth;
-        translate([dx-tabwidth/2,-(i+1)%2*tablength,0]) cube([tabwidth,tablength,thickness/2]);
+        translate([dx-tabwidth/2, -tablength, 0]) cube([tabwidth, 2*tablength, thickness/2]);
+        translate([tabspine_start, -tabwidth/2+dy-(2*(i%2)-1)*.7*addendum, 0]) cube([tabspine_length,tabwidth,thickness/2]);
     }
-
+    
     color("green") translate([-2*ring_radius-addendum,0,0]) children(carrier_index);
     color("red") children(ring_index);
     color("pink") translate([-3*ring_radius-3*addendum,0,2*thickness]) rotate([0,180,90]) children(bracket_index);
 };
 
+module gearToothTabs(gear_params, length, height, tabbed_teeth) {
+    width = gearToothWidth(gear_params);
+    r = gearRadiusP(gear_params);
+    nteeth = gearToothCount(gear_params);
+    for (n = tabbed_teeth) {
+        dtheta = 360 / (nteeth * 2)*(nteeth%2) + (360*n/nteeth);
+        rotate(dtheta) translate([-width/2, r, 0]) cube([width, length, height]);
+    }
+}
+
 // user custom parameters
 $vpr = [20, $t*360, 0];
-tooth_width = 3/16;
+tooth_width = 2.5/16;
 backlash = .003;
 pressure_angle = 18;
 n_planets = 3;
 sun_teeth = 9; // must be multiple of n_planets;
 ring_teeth = 27; // must be multiple of n_planets and "ring_teeth-sun_teeth" must be even.
-sun_hole = .375;
-planet_hole = .375;
-thickness = 0.25;
+sun_hole = .25;
+planet_hole = .25;
+thickness = 0.1875;
 carrier_arm_width = 2*planet_hole;
 
 assert((ring_teeth - sun_teeth) % 2 == 0, "difference between sun and ring tooth count must be even");
@@ -287,7 +298,7 @@ planet_radius = gearRadiusP(planet_params);
 sun_radius = gearRadiusP(sun_params);
 ring_radius = gearRadius(tooth_width, ring_teeth);
 planet_arm_radius = ring_radius - planet_radius;
-echo("ring_diameter=", 2*ring_radius);
+echo("ring_diameter=", 2*(ring_radius+2*tooth_width));
 echo("gear_ratio=", 1+ring_radius / sun_radius);
 
 //assembly_layout(n_planets, planet_params, sun_params, ring_teeth, thickness, carrier_lift=0) {

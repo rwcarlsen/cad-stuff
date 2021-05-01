@@ -1,27 +1,25 @@
 $fn = 60;
-resolution = 5; // 10 is high/good
+resolution = 10; // 10 is high/good
 
 // backlash is extra absolute distance to leave between meshing teeth
-function gearParams(tooth_count, tooth_width, pressure_angle, backlash) = [tooth_count, tooth_width, pressure_angle, backlash];
+function gearParams(tooth_count, tooth_width, pressure_angle, backlash, addendum_factor=2/PI) = [tooth_count, tooth_width, pressure_angle, backlash, addendum_factor];
 function gearToothCount(params) = params[0];
 function gearToothWidth(params) = params[1];
 function gearPressureAngle(params) = params[2];
 function gearBacklash(params) = params[3];
+function gearAddendum(params) = params[4]*gearToothWidth(params);
 function gearRadius(tooth_width, tooth_count) = tooth_width * 2 * tooth_count / PI / 2;
 function gearRadiusP(params) = gearToothWidth(params) * 2 * gearToothCount(params) / PI / 2;
-function modBacklash(params, backlash) = [params[0], params[1], params[2], backlash];
+function modBacklash(params, backlash) = [params[0], params[1], params[2], backlash, params[4]];
 
-module gear(params) {
+module spurToothHole(params, addendum_clearance) {
     tooth_width = gearToothWidth(params);
     tooth_count = gearToothCount(params);
     pressure_angle = gearPressureAngle(params);
     backlash = gearBacklash(params);
-
-    addendum_clearance = 0.05; // fraction of addendum
-    addendum = tooth_width*2/PI; // how far above+below pitch line teeth go
+    addendum = gearAddendum(params);
 
     addendum_big = (1 + addendum_clearance) * addendum;
-    addendum_small = (1 - addendum_clearance) * addendum;
     circum = tooth_width * 2 * tooth_count;
     diameter = circum / PI;
     radius = diameter / 2;
@@ -44,33 +42,68 @@ module gear(params) {
     pts = [pt1, pt2, pt3, pt4];
 
     ndivs = 2*resolution;
-    difference() {
-        circle(d=diameter + 2*addendum_small);
-        // subtract out the hole each meshing tooth takes out of our gear as it passes by
-        for (i = [0:tooth_count-1]) {
-            rotate(a=[0, 0, i*360/tooth_count]) {
-                // simulate each tooth by translating it along the x axis
-                for (j = [-(ndivs-1):ndivs-1]) {
-                    dx = j / (2*ndivs) * 4 * tooth_width;
-                    dtheta = dx / circum * 360;
-                    // and rotating it as much as our gear would have to rotate
-                    rotate(a=[0, 0, dtheta]) {
-                        translate([dx,0,0]){
-                            polygon(pts);
-                        }
-                    }
-                }
+    // simulate each contact position by translating it along the x axis
+    for (j = [-(ndivs-1):ndivs-1]) {
+        dx = j / (2*ndivs) * 4 * tooth_width;
+        dtheta = dx / circum * 360;
+        // and rotating it as much as our gear would have to rotate
+        rotate(a=[0, 0, dtheta]) {
+            translate([dx,0,0]){
+                polygon(pts);
             }
         }
     }
 }
 
+module spurTooth(params, addendum_clearance) {
+    tooth_count = gearToothCount(params);
+    addendum = gearAddendum(params);
+    eps=.001;
+
+    addendum_small = (1 - addendum_clearance) * addendum;
+    circum = tooth_width * 2 * tooth_count;
+    diameter = circum / PI;
+    outer_dia = diameter + 2*addendum_small;
+    
+    rotate(-360/(2*tooth_count)) {
+        difference() {
+            circle(d=outer_dia);
+
+            // subtract off the rest of the gear/circle except a single pie slice around tooth
+            translate([0, -(outer_dia+eps)/2, 0]) square(outer_dia+eps);
+            rotate(360/tooth_count) translate([-outer_dia+eps, -(outer_dia+eps)/2, 0]) square(outer_dia+eps);
+            // subtract out the hole each meshing tooth takes out of our gear as it passes by
+            for (i = [0, 1]) {
+                rotate(a=[0, 0, i*360/tooth_count]) spurToothHole(params, addendum_clearance);
+            }
+        }
+    }
+}
+
+module spurGear(params, addendum_clearance=0.05) {
+    tooth_count = gearToothCount(params);
+    addendum = gearAddendum(params);
+
+    addendum_small = (1 - addendum_clearance) * addendum;
+    circum = tooth_width * 2 * tooth_count;
+    diameter = circum / PI;
+
+    difference() {
+        circle(d=diameter + 2*addendum_small);
+        // subtract out the hole each meshing tooth takes out of our gear as it passes by
+        for (i = [0:tooth_count-1]) {
+            rotate(a=[0, 0, i*360/tooth_count]) spurToothHole(params, addendum_clearance);
+        }
+    }
+}
+
 // generally the inner_gear_params should be for the planet gears.
-module ring(tooth_count, inner_gear_params, hole_dia, thickness) {
+module ring(tooth_count, inner_gear_params, hole_dia, thickness, addendum_clearance=0.05) {
     tooth_width = gearToothWidth(inner_gear_params);
     inner_tooth_count = gearToothCount(inner_gear_params);
     pressure_angle = gearPressureAngle(inner_gear_params);
     backlash = gearBacklash(inner_gear_params);
+    addendum = gearAddendum(inner_gear_params);
     modded_params = modBacklash(inner_gear_params, -backlash);
 
     inner_circum = tooth_width * 2 * inner_tooth_count;
@@ -80,9 +113,8 @@ module ring(tooth_count, inner_gear_params, hole_dia, thickness) {
     outer_diameter = outer_circum / PI;
     outer_radius = outer_diameter / 2;
     
-    addendum_clearance = 0.15; // fraction of addendum
-    addendum = tooth_width*2/PI; // how far above+below pitch line teeth go
-    addendum_small = (1 - addendum_clearance) * addendum;
+    ring_addendum_clearance = 0.15; // for the ring specifically - not the ring's inner gear(s)
+    addendum_small = (1 - ring_addendum_clearance) * addendum;
     
     ring_width = 2 * tooth_width;
     inner_axle_radius = outer_radius - inner_radius;
@@ -96,16 +128,17 @@ module ring(tooth_count, inner_gear_params, hole_dia, thickness) {
         }
     }
     
-    linear_extrude(height=2*thickness) {
+    rotate(360/(2*ring_teeth)) linear_extrude(height=2*thickness) {
         difference() {
-            difference() {circle(r=outer_radius + ring_width);circle(r=outer_radius - addendum_small);}
+            difference() {circle(r=outer_radius + ring_width); circle(r=outer_radius - addendum_small);}
             for (i = [0:tooth_count-1]) {
+                dtheta_initial = i/tooth_count*360;
                 rotate([0,0,i/tooth_count*360]) {
-                    for (j = [-ndivs+1:ndivs-1]){
+                    for (j = [-ndivs+1:ndivs-1]) {
                         frac = j / ndivs;
                         dtheta_outer = frac * 360 / tooth_count;
                         dtheta_inner = -frac / inner_tooth_count * 360;
-                        rotate([0,0,dtheta_outer]) translate([0,inner_axle_radius,0]) rotate([0,0,dtheta_inner]) gear(modded_params);
+                        rotate([0,0,dtheta_outer]) rotate(dtheta_initial) translate([0,inner_axle_radius,0]) rotate(dtheta_inner) spurTooth(modded_params, addendum_clearance);
                     }
                 }
             }
@@ -122,13 +155,13 @@ module hole(d) {
     difference(convexity=10) {children(0); circle(d=d);}
 }
 
-module gear3D(params, thickness, shaft_d=0) {
+module spurGear3D(params, thickness, shaft_d=0) {
     inset = thickness / 4;
-    addendum = gearToothWidth(params)*2/PI; // how far above+below pitch line teeth go
-    inset_r2 = gearRadiusP(params) - 1.6*addendum;
-    inset_r1 = shaft_d/2 + addendum*0.6;
+    addendum = gearAddendum(params);
+    inset_r2 = gearRadiusP(params) - addendum-1/16;
+    inset_r1 = shaft_d/2 + 1/16;
     difference(convexity=10) {
-        linear_extrude(height=thickness, convexity=10) hole(d=shaft_d) gear(params);
+        linear_extrude(height=thickness, convexity=10) hole(d=shaft_d) spurGear(params);
         translate([0,0,-.05*thickness])
             linear_extrude(height=0.1*thickness, convexity=10) hole(d=2*inset_r1) circle(r=inset_r2);
     }
@@ -138,12 +171,12 @@ module topBracket(tooth_count, inner_gear_params, hole_dia, thickness) {
     tooth_width = gearToothWidth(inner_gear_params);
     inner_tooth_count = gearToothCount(inner_gear_params);
     pressure_angle = gearPressureAngle(inner_gear_params);
+    addendum = gearAddendum(inner_gear_params);
 
     outer_circum = tooth_width * 2 * tooth_count;
     outer_diameter = outer_circum / PI;
     outer_radius = outer_diameter / 2;
     
-    addendum = tooth_width*2/PI;
     ring_width = 2 * tooth_width;
     pin_height = thickness/2;
     difference(convexity=10) {
@@ -164,6 +197,7 @@ module topBracket(tooth_count, inner_gear_params, hole_dia, thickness) {
 
 module planet_carrier(n_arms, arm_width, arm_length, hole_dia, thickness) {
     length = arm_length - (arm_width - hole_dia) *0.25; // reduced length to match arm outer curve to carrier pins
+    tolerance = .001; // space to make pins smaller than holes to allow free turning
     union() {
         linear_extrude(height=thickness-1/32, convexity=10) {
             for (i = [0:n_arms - 1]) {
@@ -185,7 +219,7 @@ module planet_carrier(n_arms, arm_width, arm_length, hole_dia, thickness) {
         linear_extrude(height=thickness, convexity=10) hole(d=hole_dia) circle(r=pad_radius); // center pad
         for (i = [0:n_arms - 1]) {
             angle = 360 / n_arms * i;
-            rotate([0,0,angle]) translate([0,arm_length,0]) cylinder(h=2*thickness, d=hole_dia); // pins
+            rotate([0,0,angle]) translate([0,arm_length,0]) cylinder(h=2*thickness, d=hole_dia-tolerance); // pins
             rotate([0,0,angle]) translate([0,arm_length,0]) cylinder(h=thickness, r=pad_radius); // pads
         }
     }
@@ -229,7 +263,7 @@ module milling_layout(n_planets, planet_params, sun_params, ring_teeth, thicknes
     bracket_index = 4;
 
 
-    addendum = gearToothWidth(sun_params)*2/PI; // how far above+below pitch line teeth go
+    addendum = gearAddendum(sun_params);
     ring_radius = gearRadius(gearToothWidth(planet_params), ring_teeth);
     sun_radius = gearRadiusP(sun_params);
     planet_radius = gearRadiusP(planet_params);
@@ -285,6 +319,7 @@ sun_hole = .25;
 planet_hole = .25;
 thickness = 0.1875;
 carrier_arm_width = 2*planet_hole;
+hole_tolerance = 0.001;
 
 assert((ring_teeth - sun_teeth) % 2 == 0, "difference between sun and ring tooth count must be even");
 assert(sun_teeth % n_planets == 0, "sun_teeth count must be a multiple of n_planets");
@@ -302,16 +337,16 @@ echo("ring_diameter=", 2*(ring_radius+2*tooth_width));
 echo("gear_ratio=", 1+ring_radius / sun_radius);
 
 //assembly_layout(n_planets, planet_params, sun_params, ring_teeth, thickness, carrier_lift=0) {
-//    gear3D(planet_params, thickness, shaft_d=planet_hole);
-//    gear3D(sun_params, thickness, shaft_d=sun_hole);
-//    ring(ring_teeth,planet_params, sun_hole, thickness);
+//    spurGear3D(planet_params, thickness, shaft_d=planet_hole);
+//    spurGear3D(sun_params, thickness, shaft_d=sun_hole);
+//    ring(ring_teeth,planet_params, sun_hole + hole_tolerance, thickness);
 //    planet_carrier(n_planets, carrier_arm_width, planet_arm_radius, planet_hole, thickness);
-//    topBracket(ring_teeth,planet_params, sun_hole, thickness);
+//    topBracket(ring_teeth,planet_params, sun_hole + hole_tolerance, thickness);
 //}
 milling_layout(n_planets, planet_params, sun_params, ring_teeth, thickness) {
-    gear3D(planet_params, thickness, shaft_d=planet_hole);
-    gear3D(sun_params, thickness, shaft_d=sun_hole);
-    ring(ring_teeth,planet_params, sun_hole, thickness);
+    spurGear3D(planet_params, thickness, shaft_d=planet_hole);
+    spurGear3D(sun_params, thickness, shaft_d=sun_hole);
+    ring(ring_teeth,planet_params, sun_hole + hole_tolerance, thickness);
     planet_carrier(n_planets, carrier_arm_width, planet_arm_radius, planet_hole, thickness);
-    topBracket(ring_teeth,planet_params, sun_hole, thickness);
+    topBracket(ring_teeth,planet_params, sun_hole + hole_tolerance, thickness);
 }

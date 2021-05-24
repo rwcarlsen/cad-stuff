@@ -294,7 +294,10 @@ module milling_layout(n_planets, planet_params, sun_params, ring_teeth, thicknes
     
     color("green") translate([-2*ring_radius-addendum,0,0]) children(carrier_index);
     color("red") children(ring_index);
-    color("pink") translate([-3*ring_radius-3*addendum,0,2*thickness]) rotate([0,180,90]) children(bracket_index);
+    bracket_dx = -3*ring_radius-3*addendum;
+    color("pink") translate([bracket_dx,0,2*thickness]) rotate([0,180,90]) children(bracket_index);
+    max_dx = ring_radius + 2*planet_radius + floor(n_planets/2) * (2 * planet_radius + 4 * addendum);
+    echo("geometry_length=", max_dx - bracket_dx + sun_radius + planet_radius);
 };
 
 module gearToothTabs(gear_params, length, height, tabbed_teeth) {
@@ -309,7 +312,7 @@ module gearToothTabs(gear_params, length, height, tabbed_teeth) {
 
 // user custom parameters
 $vpr = [20, $t*360, 0];
-tooth_width = 2.5/16;
+tooth_width = 2.3/16;
 backlash = .003;
 pressure_angle = 18;
 n_planets = 3;

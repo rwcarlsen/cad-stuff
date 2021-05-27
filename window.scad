@@ -18,7 +18,7 @@ module wall_plates() {
     inner_circ = PI * (bin_d - 2*wall_thickness);
     stud_dtheta = 16 / inner_circ * 360;
     nstuds = ceil(inner_circ / 16);
-    difference() {
+    color("lightgray") difference(convexity=10) {
         cylinder(h=wall_h, d=bin_d);
         translate([0,0,-.5]) cylinder(h = wall_h + 1, d=bin_d - 2*wall_thickness);
         translate([0,0,stud_thickness]) cylinder(h=wall_h - 2*stud_thickness, d=bin_d+1);
@@ -28,7 +28,7 @@ module wall_plates() {
 //    }
 }
 module wall() {
-    difference() {
+    difference(convexity=10) {
         cylinder(h=wall_h, d=bin_d+2*corrugation_thickness);
         translate([0,0,-.5]) cylinder(h = wall_h + 1, d=bin_d);
     }
@@ -40,7 +40,7 @@ module window_frame() {
     window_elevation_big = window_elevation - stud_thickness;
     
     cripple_h = window_elevation_big - 2*stud_thickness;
-    jack_h = window_elevation_big + window_h_big;
+    jack_h = window_elevation_big + window_h_big - stud_thickness;
     king_h = wall_h - 2*stud_thickness;
     color1 = "red";
     color2 = "green";
@@ -63,20 +63,21 @@ module window_frame() {
         color(color3) translate([0, wall_thickness-stud_thickness, jack_h]) cube([window_w_big+2*stud_thickness, stud_thickness, wall_thickness]);
         
         // wide frame
-        overhang = bin_d / 2 - 1/2*sqrt(bin_d^2 - (window_w + 6 * stud_thickness)^2) + corrugation_thickness;
-        //overhang = corrugation_thickness;
+        //overhang = bin_d / 2 - 1/2*sqrt(bin_d^2 - (window_w + 6 * stud_thickness)^2) + corrugation_thickness;
+        overhang = corrugation_thickness;
         echo("overhang: ", overhang);
         frame_thickness = wall_thickness + overhang;
         color(color1) translate([2*stud_thickness, 0, cripple_h+stud_thickness]) cube([window_w_big-2*stud_thickness, frame_thickness, stud_thickness]);
         color(color2) translate([stud_thickness, 0, jack_h - stud_thickness]) cube([window_w_big, frame_thickness, stud_thickness]);
-        color(color3) translate([stud_thickness, 0, cripple_h + stud_thickness]) cube([stud_thickness, frame_thickness, jack_h - cripple_h - 2*stud_thickness]);
-        color(color3) translate([stud_thickness, 0, cripple_h + stud_thickness]) cube([stud_thickness, frame_thickness, jack_h - cripple_h - 2*stud_thickness]);
-        color(color3) translate([window_w_big, 0, cripple_h + stud_thickness]) cube([stud_thickness, frame_thickness, jack_h - cripple_h - 2*stud_thickness]);
+        color(color3) translate([stud_thickness, 0, cripple_h + stud_thickness]) cube([stud_thickness, frame_thickness, window_h + stud_thickness]);
+        color(color3) translate([window_w_big, 0, cripple_h + stud_thickness]) cube([stud_thickness, frame_thickness, window_h + stud_thickness]);
     }
 }
 
 module window_hole() {
-    translate([-window_w / 2, 0, window_elevation]) cube([window_w, wall_thickness * 2, window_h]);
+    w = window_w + 2*stud_thickness;
+    h = window_h + 2*stud_thickness;
+    translate([-w / 2, 0, window_elevation - stud_thickness]) cube([w, wall_thickness * 2, h]);
 }
 
 

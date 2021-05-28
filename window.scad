@@ -28,7 +28,7 @@ module wall_plates() {
 //    }
 }
 module wall() {
-    difference(convexity=10) {
+    color("tan") difference(convexity=10) {
         cylinder(h=wall_h, d=bin_d+2*corrugation_thickness);
         translate([0,0,-.5]) cylinder(h = wall_h + 1, d=bin_d);
     }
@@ -42,9 +42,9 @@ module window_frame() {
     cripple_h = window_elevation_big - 2*stud_thickness;
     jack_h = window_elevation_big + window_h_big - stud_thickness;
     king_h = wall_h - 2*stud_thickness;
-    color1 = "red";
-    color2 = "green";
-    color3 = "blue";
+    color1 = "violet";
+    color2 = "lightgreen";
+    color3 = "skyblue";
     
     translate([-2*stud_thickness - window_w/2,-wall_thickness,stud_thickness]) group() {
         // jack studs
@@ -64,9 +64,12 @@ module window_frame() {
         
         // wide frame
         //overhang = bin_d / 2 - 1/2*sqrt(bin_d^2 - (window_w + 6 * stud_thickness)^2) + corrugation_thickness;
-        overhang = corrugation_thickness;
-        echo("overhang: ", overhang);
+        g_inner = bin_d / 2 - 1/2*sqrt(bin_d^2 - (window_w + 4 * stud_thickness)^2);
+        bin_d_outer = bin_d + 2*corrugation_thickness;
+        g_outer = bin_d_outer / 2 - 1/2*sqrt(bin_d_outer^2 - window_w^2);
+        overhang = corrugation_thickness - g_outer + g_inner;
         frame_thickness = wall_thickness + overhang;
+        echo("frame depth: ", frame_thickness);
         color(color1) translate([2*stud_thickness, 0, cripple_h+stud_thickness]) cube([window_w_big-2*stud_thickness, frame_thickness, stud_thickness]);
         color(color2) translate([stud_thickness, 0, jack_h - stud_thickness]) cube([window_w_big, frame_thickness, stud_thickness]);
         color(color3) translate([stud_thickness, 0, cripple_h + stud_thickness]) cube([stud_thickness, frame_thickness, window_h + stud_thickness]);

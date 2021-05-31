@@ -4,7 +4,7 @@ r_inner = 6;
 stair_rise = 8;
 stair_run = 10; // at mid-point
 stair_width = 30;
-staircase_height = 8*12+10;
+staircase_height = 9*12+10;
 pipe_thickness = 0.25;
 stair_thickness = 1.5;
 

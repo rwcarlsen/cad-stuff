@@ -83,6 +83,8 @@ module window_hole() {
     translate([-w / 2, 0, window_elevation - stud_thickness]) cube([w, wall_thickness * 2, h]);
 }
 
+//include <stairs.scad>
+//include <cabinets.scad>
 
 wall_plates();
 offset = bin_d/2 - 1/2*sqrt(bin_d^2 - (window_w + 6*stud_thickness)^2);

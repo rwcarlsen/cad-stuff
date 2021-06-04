@@ -1,12 +1,14 @@
 $fn=80;
 
-r_inner = 6;
-stair_rise = 8;
+r_inner = 5;
+stair_rise = 8.5;
 stair_run = 10; // at mid-point
-stair_width = 30;
-staircase_height = 9*12+10;
+stair_width = 32;
+joist_height = 10;
+staircase_height = 9*12+joist_height;
 pipe_thickness = 0.25;
 stair_thickness = 1.5;
+bin_d = 26*12;
 
 sidebar_height = 10;
 
@@ -30,6 +32,10 @@ railing_height = 32;
 railing_d = .75;
 railing_inset = 1.5;
 
+head_clearance = (floor(360 / stair_angle) - 1 - 1) * stair_rise_actual - stair_thickness - angle_iron_width;
+head_clearance_ft = floor(head_clearance/12);
+echo("head_clearance: ", head_clearance_ft, "ft.", head_clearance - 12*head_clearance_ft, "in.");
+
 module stair_top(r_inner, r_outer, stair_angle, overlap_frac) {
     difference(convexity=10) {
         circle(r=r_outer);
@@ -40,32 +46,66 @@ module stair_top(r_inner, r_outer, stair_angle, overlap_frac) {
 }
 
 // stairs themselves
-for (i = [0:n_stairs - 1]) {   
-    dz = i*stair_rise_actual+stair_rise_actual;
-    dtheta = i*stair_angle;
-    // angle-slice stairs
-    color("tan") translate([0,0,dz + support_thickness]) rotate(dtheta) linear_extrude(stair_thickness) stair_top(r_inner, r_outer, stair_angle, stair_overlap_frac);
-    
-    dtheta2 = dtheta + stair_angle*(1+stair_overlap_frac);
-    
-    // angle iron support
-    color("grey") rotate(dtheta2) translate([r_inner-1,-angle_iron_width,dz])
-        cube([angle_iron_length+1, angle_iron_width, support_thickness]);
-    color("grey") rotate(dtheta2) translate([r_inner-1,-support_thickness,dz-angle_iron_width + support_thickness])
-        cube([angle_iron_length+1, support_thickness, angle_iron_width]);
-    
-    // railing
-    color("lightgrey") rotate(dtheta2 - stair_angle*(stair_overlap_frac/2)) translate([r_outer - railing_inset, 0, dz]) cylinder(h=railing_height+stair_rise, d=railing_d);
-    
+module staircase() {
+    for (i = [0:n_stairs - 1]) {   
+        dz = i*stair_rise_actual+stair_rise_actual;
+        dtheta = i*stair_angle;
+        // angle-slice stairs
+        color("tan") translate([0,0,dz + support_thickness]) rotate(dtheta) linear_extrude(stair_thickness) stair_top(r_inner, r_outer, stair_angle, stair_overlap_frac);
+        
+        dtheta2 = dtheta + stair_angle*(1+stair_overlap_frac);
+        
+        // angle iron support
+        color("grey") rotate(dtheta2) translate([r_inner-1,-angle_iron_width,dz])
+            cube([angle_iron_length+1, angle_iron_width, support_thickness]);
+        color("grey") rotate(dtheta2) translate([r_inner-1,-support_thickness,dz-angle_iron_width + support_thickness])
+            cube([angle_iron_length+1, support_thickness, angle_iron_width]);
+        
+        // railing
+        color("lightgrey") rotate(dtheta2 - stair_angle*(stair_overlap_frac/2)) translate([r_outer - railing_inset, 0, dz]) cylinder(h=railing_height+stair_rise, d=railing_d);
+    }
 }
-
-// person simulator
-//translate([20,-20,0]) cylinder(78,r=12);
 
 // center post
-color("skyblue") difference(convexity=10) {
-    cylinder(h=staircase_height, r=r_inner);
-    translate([0,0,-0.5]) cylinder(h=staircase_height+1, r=r_inner - pipe_thickness);
-    // flue pipe hole
-    translate([0,0,48]) rotate([90,0,0]) cylinder(h=r_inner*2, d=8);
+module center_post() {
+    difference(convexity=10) {
+        cylinder(h=staircase_height, r=r_inner);
+        translate([0,0,-0.5]) cylinder(h=staircase_height+1, r=r_inner - pipe_thickness);
+        // flue pipe hole
+        translate([0,0,48]) rotate([90,0,0]) cylinder(h=r_inner*2, d=8);
+    }
 }
+
+module ring_support_beam(nth_stair) {    
+    beam_width = 3;
+    beam_height = 8;
+    dz_tmp = (nth_stair) * stair_rise_actual - beam_height;
+    dz = dz_tmp > staircase_height - joist_height - beam_height ? staircase_height - joist_height - beam_height : dz_tmp;
+    dtheta = stair_angle * (nth_stair + stair_overlap_frac);
+    rotate(dtheta) translate([r_inner, -beam_width-support_thickness, dz]) cube([bin_d / 2, beam_width, beam_height]);
+}
+
+ring_height = 6;
+module joist_ring() {
+    translate([0,0,staircase_height - joist_height - ring_height]) linear_extrude(ring_height) difference() {
+        circle(r=r_outer + 3 + 2);
+        circle(r=r_outer + 3);
+    }
+}
+module support_post(angle) {
+    rotate(angle) translate([r_outer + 2*2, 0, 0]) cylinder(h=staircase_height - joist_height - ring_height, r=2);
+}
+
+staircase();
+color("skyblue") center_post();
+//ring_support_beam(12);
+//ring_support_beam(15);
+support_post(0);
+support_post(120);
+support_post(220);
+joist_ring();
+
+
+// person simulator
+//translate([23,-15,stair_rise]) cylinder(75,r=9);
+

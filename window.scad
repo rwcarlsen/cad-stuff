@@ -1,6 +1,6 @@
 $fn = 100;
 
-bin_d = 26.5*12;
+bin_d = 26*12;
 wall_h = 9*12;
 wall_thickness = 6;
 window_w = 27.5;
@@ -83,15 +83,15 @@ module window_hole() {
     translate([-w / 2, 0, window_elevation - stud_thickness]) cube([w, wall_thickness * 2, h]);
 }
 
-//include <stairs.scad>
-//include <cabinets.scad>
+include <stairs.scad>
+include <cabinets.scad>
 
 wall_plates();
 offset = bin_d/2 - 1/2*sqrt(bin_d^2 - (window_w + 6*stud_thickness)^2);
 translate([0, bin_d/2 - offset, 0]) window_frame();
-difference(convexity=10) {
-    wall();
-    translate([0, bin_d/2 - wall_thickness/2, 0]) window_hole();
-}
+//difference(convexity=10) {
+//    wall();
+//    translate([0, bin_d/2 - wall_thickness/2, 0]) window_hole();
+//}
 
 

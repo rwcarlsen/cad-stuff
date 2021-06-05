@@ -76,15 +76,6 @@ module center_post() {
     }
 }
 
-module ring_support_beam(nth_stair) {    
-    beam_width = 3;
-    beam_height = 8;
-    dz_tmp = (nth_stair) * stair_rise_actual - beam_height;
-    dz = dz_tmp > staircase_height - joist_height - beam_height ? staircase_height - joist_height - beam_height : dz_tmp;
-    dtheta = stair_angle * (nth_stair + stair_overlap_frac);
-    rotate(dtheta) translate([r_inner, -beam_width-support_thickness, dz]) cube([bin_d / 2, beam_width, beam_height]);
-}
-
 ring_height = 6;
 module joist_ring() {
     translate([0,0,staircase_height - joist_height - ring_height]) linear_extrude(ring_height) difference() {
@@ -96,15 +87,12 @@ module support_post(angle) {
     rotate(angle) translate([r_outer + 2*2, 0, 0]) cylinder(h=staircase_height - joist_height - ring_height, r=2);
 }
 
-staircase();
+rotate(-stair_angle) staircase();
 color("skyblue") center_post();
-//ring_support_beam(12);
-//ring_support_beam(15);
 support_post(0);
 support_post(120);
-support_post(220);
+support_post(240);
 joist_ring();
-
 
 // person simulator
 //translate([23,-15,stair_rise]) cylinder(75,r=9);

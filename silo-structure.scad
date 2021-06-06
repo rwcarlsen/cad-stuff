@@ -13,10 +13,10 @@ module wall_plates() {
     framing_plate(bin_eave_h - stud_width);
 }
 
-module framing_plate(h) {
-    translate([0,0,h]) linear_extrude(stud_width, convexity=100) difference() {
-        circle(d=bin_d);
-        circle(d=bin_d - 2 * wall_thickness);
+module framing_plate(z, d=bin_d, t=wall_thickness, h=stud_width) {
+    translate([0,0,z]) linear_extrude(h, convexity=100) difference() {
+        circle(d=d);
+        circle(d=d - 2 * t);
     }
 }
 

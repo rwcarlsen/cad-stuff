@@ -1,7 +1,7 @@
 include <silo-common.scad>
 
 module wall() {
-    color("tan") difference(convexity=10) {
+    color("Gainsboro") difference(convexity=100) {
         cylinder(h=bin_eave_h, d=bin_d+2*corrugation_thickness);
         translate([0,0,-.5]) cylinder(h = bin_eave_h + 1, d=bin_d);
     }
@@ -14,14 +14,15 @@ module wall_plates() {
 }
 
 module framing_plate(h) {
-    translate([0,0,h]) linear_extrude(stud_width) difference() {
+    translate([0,0,h]) linear_extrude(stud_width, convexity=100) difference() {
         circle(d=bin_d);
         circle(d=bin_d - 2 * wall_thickness);
     }
 }
 
 module roof() {
-    translate([0,0,bin_eave_h]) cylinder(h=bin_d / 2 * roof_pitch, d1=bin_d, d2=0);
+    lid_d = 24;
+    color("Gainsboro") translate([0,0,bin_eave_h]) cylinder(h=bin_d / 2 * roof_pitch, d1=bin_d, d2=lid_d);
 }
 
 wall_plates();

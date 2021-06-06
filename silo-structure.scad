@@ -10,6 +10,7 @@ module wall() {
 module wall_plates() {
     framing_plate(0);
     framing_plate(floor1_ceil_h - stud_width);
+    framing_plate(floor1_ceil_h + joist_height);
     framing_plate(bin_eave_h - stud_width);
 }
 

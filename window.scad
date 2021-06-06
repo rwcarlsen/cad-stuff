@@ -1,13 +1,13 @@
 include <silo-common.scad>
 
-module window_frame(w, h, elevation, header_h=6) {
+module window_frame(w, h, elevation, header_h=6, ceil_h=floor1_ceil_h) {
     window_h_big = h + 2*stud_width;
     window_w_big = w + 2*stud_width;
     elevation_big = elevation - stud_width;
     
     cripple_h = elevation_big - 2*stud_width;
     jack_h = elevation_big + window_h_big - stud_width;
-    king_h = floor1_ceil_h - 2*stud_width;
+    king_h = ceil_h - 2*stud_width;
     color1 = "violet";
     color2 = "lightgreen";
     color3 = "skyblue";
@@ -43,15 +43,15 @@ module window_frame(w, h, elevation, header_h=6) {
     }
 }
 
-module window_hole(w, h, angle, elevation) {
+module window_hole(w, h, angle, elevation, floor_start=0) {
     ww = w + 2*stud_width;
     hh = h + 2*stud_width;
-    rotate(angle) translate([-ww / 2, bin_d/2 - wall_thickness/2, elevation - stud_width]) cube([ww, wall_thickness * 2, hh]);
+    rotate(angle) translate([-ww / 2, bin_d/2 - wall_thickness/2, elevation - stud_width + floor_start]) cube([ww, wall_thickness * 2, hh]);
 }
 
-module window(w, h, angle, elevation) {
+module window(w, h, angle, elevation, floor_start=0, ceil_h=floor1_ceil_h) {
     offset = bin_d/2 - 1/2*sqrt(bin_d^2 - (w + 6*stud_width)^2);
-    rotate(angle) translate([0, bin_d/2 - offset, 0]) window_frame(w, h, elevation);
+    translate([0,0,floor_start]) rotate(angle) translate([0, bin_d/2 - offset, 0]) window_frame(w, h, elevation, ceil_h=ceil_h);
 }
 
 w = 24;

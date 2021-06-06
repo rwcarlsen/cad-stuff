@@ -1,10 +1,10 @@
-$fn=100;
+include <silo-common.scad>
+
 offset_r = 12;
-bin_d = 26*12;
 cabinet_depth = 2*12;
 cabinet_height = 34;
-inside_d1 = 6*12+1 + 2*offset_r;
-inside_d2 = bin_d - 2*6 - 2*cabinet_depth;
+inside_d1 = (stair_r_inner + stair_width)*2 + 2*offset_r;
+inside_d2 = bin_d - 2*wall_thickness - 2*cabinet_depth;
 
 module cabinet(inside_d, angle) {
     outside_d = inside_d + 2*cabinet_depth;
@@ -16,8 +16,12 @@ module cabinet(inside_d, angle) {
     }
 }
 
-color("pink") cabinet(inside_d1, 80);
-color("pink") cabinet(inside_d2, 100);
-color("red") rotate(-155) translate([-24,0,0]) cabinet(inside_d1, 20);
+module cabinets() {
+    color("pink") cabinet(inside_d1, 80);
+    color("pink") cabinet(inside_d2, 100);
+    color("red") rotate(-155) translate([-36,0,0]) cabinet(inside_d1, 20);
+}
+
+cabinets();
 
 

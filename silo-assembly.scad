@@ -56,6 +56,7 @@ module silo2() {
 module vestibule() {
     h_high = bin_eave_h - 6;
     h_low = floor1_ceil_h + joist_height;
+    //h_low = h_high;
     dx = -bin_d - 44;
     dy1 = vestibule_width / 2 - 2*wall_thickness;
     dy2 = -vestibule_width / 2;
@@ -120,7 +121,7 @@ module deck() {
     }
 }
 
-rotate(80) silo1(wall=false);
+rotate(80) silo1(wall=true);
 translate([-bin_d - 44, 0, 0]) silo2();
 vestibule();
 color("tan") deck();

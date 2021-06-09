@@ -1,6 +1,6 @@
 $fn = 100;
 
-bin_d = 26*12;
+bin_d = 26.5*12;
 floor1_ceil_h = 9*12;
 bin_eave_h = 18*12 + 4;
 corrugation_thickness = 1;

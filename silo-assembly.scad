@@ -96,25 +96,41 @@ module high_deck() {
     }
 }
 
+module circle_railing(d, spacing, height) {
+    nrailing = floor(PI * d / spacing);
+    for (n = [0:nrailing-1]) {
+        dtheta = -n*360/nrailing;
+        rotate(dtheta) translate([d / 2, 0, 0]) cylinder(h=height, r=0.75);
+        rotate(-dtheta) translate([d / 2, 0, 0]) cylinder(h=height, r=0.75);
+    }
+    framing_plate(height, d=d, t=2, h=2);
+}
+
 module deck() {
     deck_thickness = wall_thickness;
-    deck_d = bin_d + 60;
-    front_protrusion = 48;
-    dy = (deck_d - bin_d)/2 - front_protrusion;
+    deck_d = 22*12;
+    front_protrusion = 60;
+    back_protrusion = 12;
+    dy_front = (deck_d - bin_d)/2 - front_protrusion;
+    dy_back = -(deck_d - bin_d)/2 + back_protrusion;
     deck_h = floor1_ceil_h + joist_height;
     difference(convexity=100) {
         group() {
-            translate([-bin_d / 2 - 44 / 2, dy, deck_h - deck_thickness]) cylinder(h=deck_thickness, d=deck_d);
+            translate([-bin_d / 2 - 44 / 2, dy_front, deck_h - deck_thickness]) cylinder(h=deck_thickness, d=deck_d);
+            translate([-bin_d / 2 - 44 / 2, dy_back, deck_h - deck_thickness]) cylinder(h=deck_thickness, d=deck_d);
             
             // railing
             rail_spacing = 5;
-            nrailing = floor(PI * deck_d / rail_spacing);
+            nrailing = floor(PI/2 * deck_d / rail_spacing);
             rail_height = 36;
-            for (n = [0:nrailing-1]) {
-                dtheta = n*360/nrailing;
-                translate([-bin_d / 2 - 44/2, dy, 0]) rotate(dtheta) translate([deck_d / 2, 0, deck_h]) cylinder(h=rail_height, r=0.75);
+            difference() {
+                translate([-bin_d / 2 - 44/2, dy_front, deck_h]) circle_railing(deck_d, rail_spacing, rail_height);
+                translate([-bin_d / 2 - 44/2, dy_back, 0]) cylinder(h=bin_eave_h, d=deck_d);
             }
-            translate([-bin_d/2 - 44/2, dy, 0]) framing_plate(deck_h + rail_height, d=deck_d, t=2, h=2);
+            difference() {
+                translate([-bin_d / 2 - 44/2, dy_back, deck_h]) circle_railing(deck_d, rail_spacing, rail_height);
+                translate([-bin_d / 2 - 44/2, dy_front, 0]) cylinder(h=bin_eave_h, d=deck_d);
+            }
         }            
         translate([-bin_d - 44, 0, 0]) cylinder(h=bin_eave_h, d=bin_d);
         cylinder(h=bin_eave_h, d=bin_d);

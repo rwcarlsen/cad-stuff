@@ -23,7 +23,11 @@ module framing_plate(z, d=bin_d, t=wall_thickness, h=stud_width) {
 
 module roof() {
     lid_d = 24;
-    color("Gainsboro") translate([0,0,bin_eave_h]) cylinder(h=bin_d / 2 * roof_pitch, d1=bin_d, d2=lid_d);
+    color("Gainsboro") translate([0,0,bin_eave_h])
+        difference(convexity=50) {
+            cylinder(h=bin_d / 2 * roof_pitch, d1=bin_d, d2=lid_d);
+            translate([0,0,-corrugation_thickness]) cylinder(h=bin_d / 2 * roof_pitch, d1=bin_d, d2=lid_d);
+        }
 }
 
 wall_plates();

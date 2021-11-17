@@ -138,47 +138,66 @@ module deck() {
     }
 }
 
-module climbing_wall(mezanine_offset) {
+module climbing_wall(mezanine_x_offset, mezanine_y_offset) {
     inside_r = bin_d/2 - wall_thickness;
     angle_to_corner = 45;
-    side_wall_length = mezanine_offset + inside_r * sin(angle_to_corner);
-    back_wall_length = 2*inside_r * cos(angle_to_corner);
+
+    doorway = 42;
+    side_space = mezanine_x_offset;
+
+    backwall_cord = 2 * sqrt(inside_r^2 - mezanine_y_offset^2);
+    side_wall_length = 11*12;
+    back_wall_length = inside_r - doorway + mezanine_x_offset;
+    back_wall_dx = -mezanine_x_offset;
+    echo("side_wall:", side_wall_length);
+    echo("back_wall:", back_wall_length);
+    
     left_h = bin_eave_h;
     roof_peak = bin_d / 2 * roof_pitch + bin_eave_h;
     wallboard = 1;
-    left_angle = 8;
-    right_angle = 20;
+    side_angle = -atan(2/10);
+    front_angle = -atan(1/5);
     
-    // side walls
-    translate([-back_wall_length/2, -side_wall_length + mezanine_offset]) rotate([0,left_angle,0]) cube([wallboard,side_wall_length, left_h]);
-    translate([back_wall_length/2-wallboard, -side_wall_length + mezanine_offset]) rotate([0,-right_angle,0]) cube([wallboard,side_wall_length, left_h]);
+    wall_peak = roof_peak;
+    side_wall_vlength = bin_eave_h / cos(side_angle);
+    side_wall_dx = back_wall_dx;// + wall_peak * sin(side_angle);
   
-    // back wall
-    wall_peak = roof_peak - 15;
-    translate([0,mezanine_offset, 0]) 
-        difference(convexity=50) {
-            translate([-back_wall_length/2,0,0]) cube([back_wall_length, wallboard, wall_peak]);
-            translate([0,0,wall_peak]) rotate([0,-atan(roof_pitch), 0]) translate([-bin_d/2,-.5*wallboard,0]) cube([bin_d, 2*wallboard, bin_d]);
-            translate([0,0,wall_peak]) rotate([0,+atan(roof_pitch), 0]) translate([-bin_d/2,-.5*wallboard,0]) cube([bin_d, 2*wallboard, bin_d]);
+    difference(convexity=50) {
+        union() {
+            // center verticle tall wall
+            color("lightgreen") translate([back_wall_dx,-mezanine_y_offset,0]) cube([back_wall_length, wallboard, wall_peak]);
+            // front wall
+            //translate([back_wall_dx,mezanine_offset - side_wall_length,0]) rotate([front_angle,0,0]) cube([back_wall_length, wallboard, wall_peak]);
+            // side wall
+            color("lightpink") translate([side_wall_dx,-mezanine_y_offset,0]) rotate([0,-side_angle,0]) cube([wallboard,side_wall_length, side_wall_vlength]);
+            // side wall top verticle portion
+            color("lavender") translate([side_wall_dx - bin_eave_h * tan(side_angle), -mezanine_y_offset, bin_eave_h]) cube([wallboard, side_wall_length, roof_pitch * bin_d / 2]);
+            // roof
+            color("skyblue") translate([side_wall_dx - bin_eave_h * tan(side_angle),-mezanine_y_offset, bin_d / 2 * roof_pitch*.77 + bin_eave_h]) rotate([-atan(0.5*.67), 0, 0]) cube([72, (inside_r + mezanine_y_offset)/sin(atan(2)), wallboard]);
         }
+        silo_negative();
+    }
 }
 
-module silo2_mezanine(offset) {
+module silo2_mezanine(x_offset, y_offset, overhang) {
     floor_thickness = 1;
     translate([0,0,floor1_ceil_h + joist_height]) linear_extrude(floor_thickness)
         difference(convexity=50) {
             circle(d=bin_d);
-            translate([-bin_d, -bin_d + offset]) square([2*bin_d, bin_d]);
+            translate([-x_offset+overhang, -y_offset]) square([bin_d, bin_d]);
         }
 }
 
-rotate(80) silo1(wall=true);
-translate([-bin_d - 44, 0, 0]) {
-    mezanine_offset = 24;
-    silo2(wall=false);
-    silo2_mezanine(mezanine_offset);
-    climbing_wall(mezanine_offset);
-}
-vestibule();
-color("tan") deck();
-color("skyblue") high_deck();
+//rotate(80) silo1(wall=false);
+//translate([-bin_d - 44, 0, 0]) {
+    mezanine_y_offset = 24; // y offset from bin center for climbing room
+    mezanine_x_offset = 78; // x offset from bin center for climbing room
+    overhang=24; // how far the mezanine overhangs the lower side wall 
+    //silo2(wall=false);
+    silo2_mezanine(mezanine_x_offset, mezanine_y_offset, overhang);
+    climbing_wall(mezanine_x_offset, mezanine_y_offset);
+//}
+
+//vestibule();
+//color("tan") deck();
+//color("skyblue") high_deck();

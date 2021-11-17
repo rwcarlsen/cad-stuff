@@ -2,13 +2,13 @@ include <silo-common.scad>
 
 staircase_height = floor1_ceil_h+joist_height;
 
-function stairAngle(run, r_inner, width) = run / (2 * PI * (r_inner + 0.5*width)) * 360;
+function stairAngle(run, r_inner, width, walk_line=3/5) = run / (2 * PI * (r_inner + walk_line*width)) * 360;
 
-pipe_thickness = 0.25;
+pipe_thickness = 0.375;
 stair_thickness = 1.5;
 
 angle_iron_length = stair_width;
-angle_iron_width = 3;
+angle_iron_width = 4;
 support_thickness = 0.25;
 stair_overlap_frac = 0.15;
 railing_height = 32;
@@ -27,8 +27,9 @@ echo("staircase_angle", staircase_angle);
 echo("stair_angle", stair_angle);
 echo("n_stairs", n_stairs);
 echo("actual_rise", stair_rise_actual);
+echo("outer_tread_run", 2*r_outer*PI *stair_angle/360);
 
-head_clearance = (floor(360 / stair_angle) - 1 - 1) * stair_rise_actual - stair_thickness - angle_iron_width;
+head_clearance = (floor(360 / stair_angle) - 1 - 1) * stair_rise_actual - stair_thickness - support_thickness;
 head_clearance_ft = floor(head_clearance/12);
 echo("head_clearance: ", head_clearance_ft, "ft.", head_clearance - 12*head_clearance_ft, "in.");
 
@@ -52,13 +53,13 @@ module staircase() {
         dtheta2 = dtheta + stair_angle*(1+stair_overlap_frac);
         
         // angle iron support
-        color("grey") rotate(dtheta2) translate([stair_r_inner-1,-angle_iron_width,dz])
-            cube([angle_iron_length+1, angle_iron_width, support_thickness]);
-        color("grey") rotate(dtheta2) translate([stair_r_inner-1,-support_thickness,dz-angle_iron_width + support_thickness])
+        color("grey") rotate(dtheta2) translate([stair_r_inner-1,-angle_iron_width/2,dz])
+            cube([angle_iron_length+1, angle_iron_width/2, support_thickness]);
+        color("grey") rotate(dtheta2) translate([stair_r_inner-1,0,dz])
             cube([angle_iron_length+1, support_thickness, angle_iron_width]);
         
         // railing
-        color("lightgrey") rotate(dtheta2 - stair_angle*(stair_overlap_frac/2)) translate([r_outer - railing_inset, 0, dz]) cylinder(h=railing_height+stair_rise, d=railing_d);
+        color("lightgrey") rotate(dtheta2 - stair_angle*(0/2)) translate([r_outer - railing_inset, railing_d/2, dz]) cylinder(h=railing_height+stair_rise, d=railing_d);
     }
     
     support_ring(r_outer, ring_height);

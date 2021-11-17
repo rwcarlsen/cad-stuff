@@ -30,6 +30,18 @@ module roof() {
         }
 }
 
+module silo_negative(lid_d=24) {
+    color("Gainsboro") difference(convexity=50) {
+        cube(3*bin_d, center=true);
+        union() {
+            cylinder(h=bin_eave_h, d=bin_d);
+            translate([0,0,bin_eave_h]) cylinder(h=bin_d / 2 * roof_pitch, d1=bin_d, d2=lid_d);
+        }
+    }
+}
+
+//silo_negative();
+
 wall_plates();
 wall();
 roof();

@@ -1,14 +1,16 @@
 $fn = 100;
 
 // config params
+level1_floor_thickness = 0.75;
+level2_floor_thickness = 0.75;
 pipe_diameter = 10;
 pipe_thickness = 0.375;
-staircase_height = 117;
+staircase_height_raw = 117; // without floors
 staircase_angle = 360;
 n_steps = 14; // number of steps up
 stair_overlap_middle = .75;
 handrail_height = 36;
-handrail_diameter = 2;
+handrail_diameter = 1.75;
 ballister_side = 1; // side-length of square tube for ballister
 ballister_thickness = .125;
 ballister_plate_thickness = .25;
@@ -17,11 +19,13 @@ angle_iron_vert=3;
 angle_iron_horiz=2;
 n_angle_holes = 4; // holes to screw angle into tread
 angle_hole_dia = .125; // holes to screw angle into tread
-tread_thickness = 1.5;
-bound_ring_diameter = 84; // e.g. the radial distance to things outside of the stairs
+tread_thickness = 1.375;
+bound_ring_diameter = 83; // e.g. the radial distance to things outside of the stairs
 outer_handrail_gap = 1.5; // distance between outer edge of handrail and e.g. the posts or ring beam
+landing_arclength = 36;
 
 // calc'd params
+staircase_height = staircase_height_raw - level1_floor_thickness + level2_floor_thickness;
 stair_angle = staircase_angle / (n_steps - 1);
 stair_rise = staircase_height / n_steps;
 ballister_length = stair_rise + tread_thickness + angle_support_thickness + handrail_height - handrail_diameter;
@@ -36,7 +40,16 @@ stair_run_middle = (stair_outer_radius + stair_inner_radius) * PI * stair_angle/
 stair_angle_with_overlap = (1 + stair_overlap_middle/stair_run_middle) * stair_angle;
 stair_arclength_with_overlap = stair_outer_radius*2*PI*stair_angle_with_overlap/360;
 stair_overlap_outer = stair_arclength_with_overlap - stair_arclength;
+head_clearance = 360/stair_angle*stair_rise - landing_arclength/stair_arclength*stair_rise;
+landing_angle = landing_arclength / PI / bound_ring_diameter * 360;
 
+// height of the bottom of the first stair angle iron support off of the concrete
+first_stair_height = stair_rise - tread_thickness - angle_support_thickness + level1_floor_thickness;
+
+echo("head clearance:", head_clearance);
+echo("landing angle:", landing_angle);
+echo("staircase height:", staircase_height);
+echo("first stair support vertical offset:", first_stair_height);
 echo("stair rise:", stair_rise);
 echo("stair run middle:", stair_run_middle);
 echo("stair angle:", stair_angle);
@@ -137,22 +150,27 @@ module full_stair() {
 }
 
 module landing() {
-    color("tan") translate([0,0,angle_support_thickness]) wedge(stair_inner_radius, stair_outer_radius, stair_angle + stair_angle_with_overlap, tread_thickness);
-    color("silver") rotate(-stair_angle_with_overlap-stair_angle) angle_iron_support();
-    color("silver") rotate(-0.9*stair_angle) translate([0,-angle_support_thickness, angle_support_thickness]) rotate([180,0,0]) angle_iron_support();
-    color("grey") rotate(-stair_angle) landing_ballister();
+    color("tan") translate([0,0,angle_support_thickness]) wedge(stair_inner_radius, stair_outer_radius, landing_angle, tread_thickness);
+    color("silver") rotate(-landing_angle) angle_iron_support();
+    color("silver") rotate(-0.5*landing_angle+180) translate([-stair_width-pipe_diameter,-angle_support_thickness, angle_support_thickness]) rotate([180,0,0]) angle_iron_support();
+    color("grey") rotate(stair_angle_with_overlap-landing_angle) landing_ballister();
 }
 
 module staircase() {
     color("grey") support_pipe();
     for (n=[0:n_steps-2]) {
-        dz = stair_rise + n*stair_rise;
+        dz = first_stair_height + n*stair_rise;
         dtheta = -n*stair_angle;
+        echo(stair=n+1, height=dz, angle=-dtheta+stair_angle_with_overlap);
         rotate(dtheta) translate([0,0,dz]) full_stair();
     }
-    translate([0,0,staircase_height]) rotate(staircase_angle) landing();
+    dz = first_stair_height + (n_steps-1)*stair_rise;
+    echo("landing height (farthest clockwise angle support bottom dz off concrete):", dz);
+    echo("landing angle:", staircase_angle + landing_angle);
+    translate([0,0,dz]) rotate(staircase_angle) landing();
 }
 
 staircase();
 //landing();
+//full_stair();
 

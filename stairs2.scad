@@ -1,4 +1,4 @@
-$fn = 100;
+$fn = 300;
 
 //////////////// config params //////////////////
 level1_floor_thickness = 0.75;
@@ -47,7 +47,8 @@ stair_angle_with_overlap = (1 + stair_overlap_middle/stair_run_middle) * stair_a
 stair_arclength_with_overlap = stair_outer_radius*2*PI*stair_angle_with_overlap/360;
 stair_overlap_outer = stair_arclength_with_overlap - stair_arclength;
 head_clearance = 360/stair_angle*stair_rise - stair_rise - landing_arclength/stair_arclength*stair_rise;
-landing_angle = landing_arclength / PI / bound_ring_diameter * 360;
+landing_angle = (landing_arclength + ballister_side + angle_support_thickness) / PI / bound_ring_diameter * 360;
+landing_angle_with_overlap = landing_angle + (stair_angle_with_overlap - stair_angle);
 
 // height of the bottom of the first stair angle iron support off of the concrete
 first_stair_height = stair_rise - tread_thickness - angle_support_thickness + level1_floor_thickness;
@@ -127,20 +128,6 @@ module landing_ballister() {
         rotate([0,-90,0]) tube(handrail_height - handrail_diameter/2, ballister_side, ballister_side, ballister_thickness);
 }
 
-module ballister_plate() {
-    s = ballister_side;
-    dz = stair_rise + angle_support_thickness - ballister_plate_thickness;
-    rotate(-stair_angle_with_overlap) translate([stair_outer_radius, -angle_support_thickness, dz]) rotate(180) difference() {
-        cube([2*s, 2*s, ballister_plate_thickness]);
-        // corner notch
-        translate([-s,-s,-1.5*ballister_plate_thickness]) cube([2*s, 2*s, 3*ballister_plate_thickness]);
-        // holes
-        translate([1.5*s, .5*s, 0]) cylinder(h=3*ballister_plate_thickness, r=angle_hole_dia/2, center=true);
-        translate([1.5*s, 1.5*s, 0]) cylinder(h=3*ballister_plate_thickness, r=angle_hole_dia/2, center=true);
-        translate([.5*s, 1.5*s, 0]) cylinder(h=3*ballister_plate_thickness, r=angle_hole_dia/2, center=true);
-    }
-}
-
 module tread() {
     translate([0,0,angle_support_thickness]) wedge(stair_inner_radius, stair_outer_radius, stair_angle_with_overlap, tread_thickness);
 }
@@ -153,14 +140,24 @@ module full_stair() {
     color("tan") tread();
     color("silver") rotate(-stair_angle_with_overlap) angle_iron_support();
     color("grey") ballister();
-    color("silver") ballister_plate();
+    color("pink") outer_stair_support();
 }
 
 module landing() {
-    color("tan") translate([0,0,angle_support_thickness]) wedge(stair_inner_radius, stair_outer_radius, landing_angle, tread_thickness);
-    color("silver") rotate(-landing_angle) angle_iron_support();
-    color("silver") rotate(-0.5*landing_angle+180) translate([-stair_width-pipe_diameter,-angle_support_thickness, angle_support_thickness]) rotate([180,0,0]) angle_iron_support();
-    color("grey") rotate(stair_angle_with_overlap-landing_angle) landing_ballister();
+    color("tan") translate([0,0,angle_support_thickness]) wedge(stair_inner_radius, stair_outer_radius, landing_angle_with_overlap, tread_thickness);
+    color("silver") rotate(-landing_angle_with_overlap) angle_iron_support();
+    color("grey") rotate(stair_angle_with_overlap-landing_angle_with_overlap) landing_ballister();
+    color("pink") outer_stair_support(arclength=landing_arclength);
+}
+
+// negative radius means rolled/curved leg-in; positive radius is for leg-out.
+// leg1 points along the rolled/curved axis and its outer edge lies on the radius;
+module bent_angle_iron(length, leg1, leg2, thickness, radius) {
+    theta = length/(2*PI*radius)*360;
+    rotate_extrude(angle=theta, convexity=10) translate([radius,0,0]) {
+        square([leg2, thickness]);
+        square([thickness, leg1]);
+    }
 }
 
 module staircase() {
@@ -213,6 +210,17 @@ module ring_post(angle, r_outer, ring_height) {
 
 staircase();
 color("skyblue") support_ring();
-//landing();
-//full_stair();
+
+module outer_stair_support(arclength=stair_arclength) {
+    length = arclength - ballister_side - angle_support_thickness;
+    leg = 1.5;
+    thickness = 0.25;
+    notch_length = angle_iron_horiz;
+    position_dtheta = (notch_length + angle_support_thickness)/2/PI/stair_outer_radius*360;
+    theta_notch = (length-notch_length)/2/PI/stair_outer_radius*360;
+    translate([thickness,0,0]) rotate(180-position_dtheta) difference(convexity=50) {
+        bent_angle_iron(length, leg, leg, thickness, -stair_outer_radius);
+        rotate(-theta_notch) translate([0,0,-.2*thickness]) bent_angle_iron(1.05*notch_length, 1.5*leg, 1.5*leg, 1.5*thickness, -stair_outer_radius + thickness);
+    }
+}
 

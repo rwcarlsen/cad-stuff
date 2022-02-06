@@ -6,7 +6,7 @@ level2_floor_thickness = 0.75;
 
 staircase_angle = 360;
 n_steps = 14; // number of steps up
-stair_overlap_middle = .75;
+stair_overlap_middle = .5;
 handrail_height = 36;
 handrail_diameter = 1.75;
 ballister_side = 1; // side-length of square tube for ballister
@@ -46,12 +46,13 @@ stair_run_middle = (stair_outer_radius + stair_inner_radius) * PI * stair_angle/
 stair_angle_with_overlap = (1 + stair_overlap_middle/stair_run_middle) * stair_angle;
 stair_arclength_with_overlap = stair_outer_radius*2*PI*stair_angle_with_overlap/360;
 stair_overlap_outer = stair_arclength_with_overlap - stair_arclength;
-head_clearance = 360/stair_angle*stair_rise - landing_arclength/stair_arclength*stair_rise;
+head_clearance = 360/stair_angle*stair_rise - stair_rise - landing_arclength/stair_arclength*stair_rise;
 landing_angle = landing_arclength / PI / bound_ring_diameter * 360;
 
 // height of the bottom of the first stair angle iron support off of the concrete
 first_stair_height = stair_rise - tread_thickness - angle_support_thickness + level1_floor_thickness;
 
+echo("stair outer radius:", stair_outer_radius);
 echo("head clearance:", head_clearance);
 echo("landing angle:", landing_angle);
 echo("staircase height:", staircase_height);
@@ -174,6 +175,7 @@ module staircase() {
     echo("landing height (farthest clockwise angle support bottom dz off concrete):", dz);
     echo("landing angle:", staircase_angle + landing_angle);
     translate([0,0,dz]) rotate(staircase_angle) landing();
+    color("pink") handrail();
 }
 
 module handrail() {
@@ -211,7 +213,6 @@ module ring_post(angle, r_outer, ring_height) {
 
 staircase();
 color("skyblue") support_ring();
-handrail();
 //landing();
 //full_stair();
 

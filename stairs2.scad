@@ -1,11 +1,9 @@
 $fn = 100;
 
-// config params
+//////////////// config params //////////////////
 level1_floor_thickness = 0.75;
 level2_floor_thickness = 0.75;
-pipe_diameter = 10;
-pipe_thickness = 0.375;
-staircase_height_raw = 117; // without floors
+
 staircase_angle = 360;
 n_steps = 14; // number of steps up
 stair_overlap_middle = .75;
@@ -20,11 +18,19 @@ angle_iron_horiz=2;
 n_angle_holes = 4; // holes to screw angle into tread
 angle_hole_dia = .125; // holes to screw angle into tread
 tread_thickness = 1.375;
-bound_ring_diameter = 83; // e.g. the radial distance to things outside of the stairs
 outer_handrail_gap = 1.5; // distance between outer edge of handrail and e.g. the posts or ring beam
-landing_arclength = 36;
 
-// calc'd params
+//////////////// Actual fixed physical params //////////////////
+landing_arclength = 35;
+post_angle_offset = 52.52; // angle rotation of post from start of first stair.
+joist_height = 7.25;
+pipe_diameter = 10;
+pipe_thickness = 0.375;
+staircase_height_raw = 117; // without floors
+bound_ring_diameter = 83; // e.g. the min radial clearance to things outside of the stairs
+
+
+//////////// calc'd params //////////////////
 staircase_height = staircase_height_raw - level1_floor_thickness + level2_floor_thickness;
 stair_angle = staircase_angle / (n_steps - 1);
 stair_rise = staircase_height / n_steps;
@@ -170,7 +176,42 @@ module staircase() {
     translate([0,0,dz]) rotate(staircase_angle) landing();
 }
 
+module handrail() {
+    start_height = ballister_length - tread_thickness +  level1_floor_thickness;
+    
+    r_rail = stair_outer_radius - 0.5*ballister_side;
+    n = 360;
+    d_arc = 2*PI*r_rail/n;
+    d_theta = staircase_angle/n;
+    d_h = (staircase_height-stair_rise)/n;
+    for (i=[0:n+3]) {
+        theta = i*d_theta;
+        arc = i*d_arc;
+        
+        h = start_height + i*d_h;
+        length = 1.2*d_arc;
+        rotate(-theta) translate([0,0,h]) rotate([90-ballister_top_angle,0,0]) translate([r_rail,0,-length/2]) pipe(length, handrail_diameter/2, 0.125);
+    }
+}
+
+module support_ring() {
+    ring_height = 7;
+    ring_radius = 42;
+    translate([0,0,staircase_height - joist_height - ring_height]) linear_extrude(ring_height) difference() {
+        circle(r=ring_radius + 2);
+        circle(r=ring_radius);
+    }
+    ring_post(post_angle_offset + 0, ring_radius + 1, ring_height);
+    ring_post(post_angle_offset + 120, ring_radius + 1, ring_height);
+    ring_post(post_angle_offset + 240, ring_radius + 1, ring_height);
+}
+module ring_post(angle, r_outer, ring_height) {
+    rotate(angle) translate([r_outer, 0, 0]) translate([1.5, -1.5, 0]) rotate([0,-90,0]) tube(staircase_height - joist_height - ring_height, 3, 3, 0.25);
+}
+
 staircase();
+color("skyblue") support_ring();
+handrail();
 //landing();
 //full_stair();
 

@@ -116,7 +116,7 @@ module angle_iron_support() {
     rotate([0,0,180]) translate([-stair_width-stair_inner_radius, -angle_iron_horiz+angle_support_thickness, 0]) holed_angle_iron(stair_width, angle_iron_horiz, angle_iron_vert, angle_support_thickness, n_angle_holes, angle_hole_dia);
 }
 module ballister() {
-    rotate(-stair_angle_with_overlap) translate([stair_outer_radius, -ballister_side-angle_support_thickness, 0]) difference() {
+    rotate(-stair_angle_with_overlap) translate([stair_outer_radius + angle_support_thickness, -ballister_side-angle_support_thickness, 0]) difference() {
         length=ballister_length_with_angle;
         rotate([0,-90,0]) tube(length, ballister_side, ballister_side, ballister_thickness);
     
@@ -212,7 +212,8 @@ staircase();
 color("skyblue") support_ring();
 
 module outer_stair_support(arclength=stair_arclength) {
-    length = arclength - ballister_side - angle_support_thickness;
+    length = arclength - ballister_side;
+    echo("stair_support:", length);
     leg = 1.5;
     thickness = 0.25;
     notch_length = angle_iron_horiz;

@@ -5,34 +5,40 @@ inches = 1.0 / 39.3701; // converts inches to m
 feet = 12 * inches; // converts feet to m
 
 // beam geometry
-radius = 11 * feet; // 11 ft
-length = 17.5 * feet; // 17.5 ft
+radius = 11 * feet;
+length = 17.5 * feet;
 
 // beam parameters
-lower_flange = 2 * inches; // 2 inches
-beam_height = 7 * inches; // 7 inches
-thickness_out = 0.366 * inches; // thickness of the leg at its outer edge
-thickness_in = 0.314 * inches; // spine thickness
-stiffener_thickness = 0.375 * inches;
+flange = 2.194 * inches;
+beam_height = 7 * inches;
+thickness_out = 0.314 * inches; // thickness of the leg at its outer edge
+thickness_in = 0.366 * inches; // leg at inner edge (near spine)
+thickness_spine = 0.314 * inches; // spine thickness
+stiffener_thickness = 0.175 * inches;
 
 // post parameters
-post_height = 8 * feet; // 8 ft.
-post_width = 4 * inches; // 4 in.
+post_height = 8 * feet;
+post_width = 4 * inches;
 post_thickness = 0.25 * inches;
 post_theta_ratio = 1/4;
 
+// gusset parameters
+gusset_offset = 2 * feet; // distance from corner (horizontal and verticle) to gusset end
+gusset_width = 2 * inches;
+gusset_thickness = 0.25 * inches;
+
 // computed params
 r_in = radius;
-r_out = r_in + lower_flange;
+r_out = r_in + flange;
 theta = Asin(length/2/r_in) * 2;
 theta2 = theta/2;
 
 /////////// points //////////////
 
-Point(1) = {0,0,0, 1};
+Point(1) = {0,0,0};
 
 // beam cross section points:
-r_spine_out = r_in + thickness_in; // radius at outer surface of spine
+r_spine_out = r_in + thickness_spine; // radius at outer surface of spine
 // bottom r_inner
 // bottom r_outer
 // bottom leg top surface outer
@@ -62,7 +68,17 @@ Point(16) = {-pw2i, pw2i, 0};
 Point(17) = {pw2i, pw2i, 0};
 Point(18) = {pw2i, -pw2i, 0};
 
-
+// gussets
+gw2 = gusset_width/2;
+Point(31) = {-gw2, -gw2, 0};
+Point(32) = {-gw2, gw2, 0};
+Point(33) = {gw2, gw2, 0};
+Point(34) = {gw2, -gw2, 0};
+gw2i = gw2 - post_thickness;
+Point(35) = {-gw2i, -gw2i, 0};
+Point(36) = {-gw2i, gw2i, 0};
+Point(37) = {gw2i, gw2i, 0};
+Point(38) = {gw2i, -gw2i, 0};
 
 /////////// curves //////////////
 
@@ -92,6 +108,16 @@ Line(21) = {3, 8};
 Line(22) = {8, 9};
 Line(23) = {9, 2};
 
+// gussets
+Line(31) = {31, 32};
+Line(32) = {32, 33};
+Line(33) = {33, 34};
+Line(34) = {34, 31};
+Line(35) = {35, 36};
+Line(36) = {36, 37};
+Line(37) = {37, 38};
+Line(38) = {38, 35};
+
 /////////// curves loops //////////////
 
 // beam
@@ -103,6 +129,10 @@ Curve Loop(3) = {15, 16, 17, 18};
 
 // stifener
 Curve Loop(4) = {20, 21, 22, 23};
+
+// gussets
+Curve Loop(5) = {31, 32, 33, 34};
+Curve Loop(6) = {35, 36, 37, 38};
 
 /////////// surfaces //////////////
 
@@ -118,6 +148,12 @@ Plane Surface(3) = {2};
 // stiffener
 Plane Surface(4) = {4};
 
+// gussets
+Plane Surface(5) = {5, 6};
+Plane Surface(6) = {5, 6};
+Plane Surface(7) = {5, 6};
+Plane Surface(8) = {5, 6};
+
 /////////// volumes //////////////
 
 // beam
@@ -125,7 +161,7 @@ beam_surfaces[] = Extrude{{0, 0, 1}, {0, 0, 0}, -theta} {Surface{1};};
 
 // posts
 r_mid = (r_in+r_out)/2;
-vert_overlap_tol = 0.01;
+vert_overlap_tol = 0.05 * inches;
 ptheta = theta2 - post_theta_ratio*theta;
 
 post1[] = Extrude{0, 0, -post_height} {Surface{2}; };
@@ -143,6 +179,47 @@ Rotate{{0, 0, 1}, {0, 0, 0}, -ptheta} {
     Translate{0, r_mid, vert_overlap_tol} { Volume{postfull[0]}; }
 }
 
+// gussets
+gusset_length = Sqrt(2)*gusset_offset;
+tmp_gusset_length = gusset_length + 0.0*(gusset_width);
+gusset1[] = Extrude{0, 0, -tmp_gusset_length} {Surface{5}; };
+gusset_rot = gusset_offset / r_mid; // scoot gusset along beam 
+Rotate{{0,0,1},{0,0,0}, ptheta + gusset_rot}{
+    Translate{0,r_mid,0.5*gusset_width}{
+        Rotate{{1,0,0},{0,0,0}, -gusset_rot/2}{
+            Rotate{{0,1,0}, {0,0,0}, -Pi/4} {Volume{gusset1[1]};}
+        }
+    }
+}
+gusset3[] = Extrude{0, 0, -tmp_gusset_length} {Surface{6}; };
+gusset_rot = gusset_offset / r_mid; // scoot gusset along beam 
+Rotate{{0,0,1},{0,0,0}, ptheta - gusset_rot}{
+    Translate{0,r_mid,0.5*gusset_width}{
+        Rotate{{1,0,0},{0,0,0}, -gusset_rot/2}{
+            Rotate{{0,1,0}, {0,0,0}, Pi/4} {Volume{gusset3[1]};}
+        }
+    }
+}
+
+gusset2[] = Extrude{0, 0, -tmp_gusset_length} {Surface{7}; };
+gusset_rot = -gusset_offset / r_mid; // scoot gusset along beam 
+Rotate{{0,0,1},{0,0,0}, -ptheta + gusset_rot}{
+    Translate{0,r_mid,0.5*gusset_width}{
+        Rotate{{1,0,0},{0,0,0}, gusset_rot/2}{
+            Rotate{{0,1,0}, {0,0,0}, Pi/4} {Volume{gusset2[1]};}
+        }
+    }
+}
+gusset4[] = Extrude{0, 0, -tmp_gusset_length} {Surface{8}; };
+gusset_rot = -gusset_offset / r_mid; // scoot gusset along beam 
+Rotate{{0,0,1},{0,0,0}, -ptheta - gusset_rot}{
+    Translate{0,r_mid,0.5*gusset_width}{
+        Rotate{{1,0,0},{0,0,0}, gusset_rot/2}{
+            Rotate{{0,1,0}, {0,0,0}, -Pi/4} {Volume{gusset4[1]};}
+        }
+    }
+}
+
 // stiffener
 extrude_angle = stiffener_thickness / r_mid;
 dtheta = ptheta + post_width / 2 / r_mid;
@@ -151,24 +228,32 @@ Rotate{{0, 0, 1}, {0, 0, 0}, -theta2 + dtheta} { Duplicata{Volume{stiffer[1]};} 
 Rotate{{0, 0, 1}, {0, 0, 0}, -theta2 - dtheta + extrude_angle} { Volume{stiffer[1]}; }
 
 ////////// physical volumes/surfaces ////////////
-Physical Surface(1) = {46}; // post1 bottom
-Physical Surface(2) = {14}; // post2 bottom
-Physical Surface(3) = {beam_surfaces[6]}; // beam top
 
 wholemesh[] = BooleanUnion {Volume{1}; Delete;}{Volume{2}; Delete;};
 wholemesh2[] = BooleanUnion {Volume{wholemesh[0]}; Delete;}{Volume{3}; Delete;};
 wholemesh3[] = BooleanUnion {Volume{wholemesh2[0]}; Delete;}{Volume{4}; Delete;};
 wholemesh4[] = BooleanUnion {Volume{wholemesh3[0]}; Delete;}{Volume{5}; Delete;};
+wholemesh5[] = BooleanUnion {Volume{wholemesh4[0]}; Delete;}{Volume{6}; Delete;};
+wholemesh6[] = BooleanUnion {Volume{wholemesh5[0]}; Delete;}{Volume{7}; Delete;};
+wholemesh7[] = BooleanUnion {Volume{wholemesh6[0]}; Delete;}{Volume{8}; Delete;};
+wholemesh8[] = BooleanUnion {Volume{wholemesh7[0]}; Delete;}{Volume{9}; Delete;};
 Physical Volume(4) = {1}; // whole mesh
 
+Physical Surface(1) = {76}; // post1 bottom
+Physical Surface(2) = {15}; // post2 bottom
+Physical Surface(3) = {13}; // beam top
+
 ///////////// meshing params //////////////////
+// disable point and curvature based mesh sizing
 Mesh.MeshSizeFromPoints = 0;
 Mesh.MeshSizeFromCurvature = 0;
 Mesh.MeshSizeExtendFromBoundary = 0;
 
+// Create a box field that just uses 1 inch element sizing inside and outside it (i.e. everywhere)
 Field[1] = Box;
-Field[1].VIn = .025;
-Field[1].VOut = .025;
+Field[1].VIn = .3 * inches;
+Field[1].VOut = .3 * inches;
 
+// use that field for the base mesh element sizing
 Background Field = 1;
 

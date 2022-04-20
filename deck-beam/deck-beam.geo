@@ -9,12 +9,11 @@ radius = 11 * feet;
 length = 17.5 * feet;
 
 // beam parameters
-flange = 2.194 * inches;
-beam_height = 7 * inches;
-thickness_out = 0.314 * inches; // thickness of the leg at its outer edge
-thickness_in = 0.366 * inches; // leg at inner edge (near spine)
-thickness_spine = 0.314 * inches; // spine thickness
-stiffener_thickness = 0.175 * inches;
+flange = 2.343 * inches;
+beam_height = 8 * inches;
+thickness_out = 0.303 * inches; // thickness of the leg at its outer edge
+thickness_in = 0.390 * inches; // leg at inner edge (near spine)
+thickness_spine = 0.303 * inches; // spine thickness
 
 // post parameters
 post_height = 8 * feet;
@@ -102,12 +101,6 @@ Line(16) = {16, 17};
 Line(17) = {17, 18};
 Line(18) = {18, 15};
 
-// stiffener
-Line(20) = {2, 3};
-Line(21) = {3, 8};
-Line(22) = {8, 9};
-Line(23) = {9, 2};
-
 // gussets
 Line(31) = {31, 32};
 Line(32) = {32, 33};
@@ -127,9 +120,6 @@ Curve Loop(1) = {1, 2, 3, 4, 5, 6, 7, 8};
 Curve Loop(2) = {11, 12, 13, 14};
 Curve Loop(3) = {15, 16, 17, 18};
 
-// stifener
-Curve Loop(4) = {20, 21, 22, 23};
-
 // gussets
 Curve Loop(5) = {31, 32, 33, 34};
 Curve Loop(6) = {35, 36, 37, 38};
@@ -144,9 +134,6 @@ Plane Surface(2) = {2, 3};
 
 // post cap
 Plane Surface(3) = {2};
-
-// stiffener
-Plane Surface(4) = {4};
 
 // gussets
 Plane Surface(5) = {5, 6};
@@ -220,13 +207,6 @@ Rotate{{0,0,1},{0,0,0}, -ptheta - gusset_rot}{
     }
 }
 
-// stiffener
-extrude_angle = stiffener_thickness / r_mid;
-dtheta = ptheta + post_width / 2 / r_mid;
-stiffer[] = Extrude{{0, 0, 1}, {0, 0, 0}, -extrude_angle} {Surface{4};};
-Rotate{{0, 0, 1}, {0, 0, 0}, -theta2 + dtheta} { Duplicata{Volume{stiffer[1]};} }
-Rotate{{0, 0, 1}, {0, 0, 0}, -theta2 - dtheta + extrude_angle} { Volume{stiffer[1]}; }
-
 ////////// physical volumes/surfaces ////////////
 
 wholemesh[] = BooleanUnion {Volume{1}; Delete;}{Volume{2}; Delete;};
@@ -235,13 +215,11 @@ wholemesh3[] = BooleanUnion {Volume{wholemesh2[0]}; Delete;}{Volume{4}; Delete;}
 wholemesh4[] = BooleanUnion {Volume{wholemesh3[0]}; Delete;}{Volume{5}; Delete;};
 wholemesh5[] = BooleanUnion {Volume{wholemesh4[0]}; Delete;}{Volume{6}; Delete;};
 wholemesh6[] = BooleanUnion {Volume{wholemesh5[0]}; Delete;}{Volume{7}; Delete;};
-wholemesh7[] = BooleanUnion {Volume{wholemesh6[0]}; Delete;}{Volume{8}; Delete;};
-wholemesh8[] = BooleanUnion {Volume{wholemesh7[0]}; Delete;}{Volume{9}; Delete;};
 Physical Volume(4) = {1}; // whole mesh
 
-Physical Surface(1) = {76}; // post1 bottom
-Physical Surface(2) = {15}; // post2 bottom
-Physical Surface(3) = {13}; // beam top
+Physical Surface(1) = {30}; // post1 bottom
+Physical Surface(2) = {53}; // post2 bottom
+Physical Surface(3) = {18}; // beam top
 
 ///////////// meshing params //////////////////
 // disable point and curvature based mesh sizing

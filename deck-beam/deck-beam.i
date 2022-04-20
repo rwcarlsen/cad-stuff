@@ -60,7 +60,7 @@
   [Pressure]
     [beam_top]
       boundary = 3
-      function = 53000
+      function = 83000
     []
   []
 []
@@ -90,8 +90,7 @@
   petsc_options_iname = '-pc_type'
   petsc_options_value = 'lu'
   dt = .001
-  num_steps = 2
-  nl_abs_tol = 1e-17
+  num_steps = 1
   automatic_scaling = true
 []
 

@@ -5,19 +5,19 @@ inches = 1.0 / 39.3701; // converts inches to m
 feet = 12 * inches; // converts feet to m
 
 // beam geometry
-radius = 11 * feet;
-length = 17.5 * feet;
+radius = 9*feet + 10*inches;
+length = 18 * feet;
 
 // beam parameters
-flange = 2.343 * inches;
-beam_height = 8 * inches;
+flange = 2.194 * inches;
+beam_height = 7 * inches;
 thickness_out = 0.303 * inches; // thickness of the leg at its outer edge
-thickness_in = 0.390 * inches; // leg at inner edge (near spine)
-thickness_spine = 0.303 * inches; // spine thickness
+thickness_in = 0.366 * inches; // leg at inner edge (near spine)
+thickness_spine = 0.314 * inches; // spine thickness
 
 // post parameters
 post_height = 8 * feet;
-post_width = 4 * inches;
+post_width = 3 * inches;
 post_thickness = 0.25 * inches;
 post_theta_ratio = 1/4;
 
@@ -217,9 +217,9 @@ wholemesh5[] = BooleanUnion {Volume{wholemesh4[0]}; Delete;}{Volume{6}; Delete;}
 wholemesh6[] = BooleanUnion {Volume{wholemesh5[0]}; Delete;}{Volume{7}; Delete;};
 Physical Volume(4) = {1}; // whole mesh
 
-Physical Surface(1) = {30}; // post1 bottom
-Physical Surface(2) = {53}; // post2 bottom
-Physical Surface(3) = {18}; // beam top
+Physical Surface(1) = {24}; // post1 bottom
+Physical Surface(2) = {69}; // post2 bottom
+Physical Surface(3) = {14}; // beam top
 
 ///////////// meshing params //////////////////
 // disable point and curvature based mesh sizing
@@ -227,10 +227,10 @@ Mesh.MeshSizeFromPoints = 0;
 Mesh.MeshSizeFromCurvature = 0;
 Mesh.MeshSizeExtendFromBoundary = 0;
 
-// Create a box field that just uses 1 inch element sizing inside and outside it (i.e. everywhere)
+// Create a box field that just uses .3 inch element sizing inside and outside it (i.e. everywhere)
 Field[1] = Box;
-Field[1].VIn = .3 * inches;
-Field[1].VOut = .3 * inches;
+Field[1].VIn = .35 * inches;
+Field[1].VOut = .35 * inches;
 
 // use that field for the base mesh element sizing
 Background Field = 1;

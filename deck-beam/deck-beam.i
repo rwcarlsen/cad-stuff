@@ -60,7 +60,7 @@
   [Pressure]
     [beam_top]
       boundary = 3
-      function = 83000
+      function = 70000
     []
   []
 []
